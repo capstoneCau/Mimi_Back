@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     # 'mimi_server.apps.user',
     # 'mimi_server.apps.meeting',
     # 'mimi_server.apps.tutorials',
+    'mimi_server.apps.animal',
     'rest_framework',
     # CORS
     'corsheaders',
