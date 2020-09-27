@@ -28,12 +28,12 @@ class UserManager(BaseUserManager):
         return user
 
 class Animal(models.Model):
-    name = models.CharField(max_length=20)
-    email_info = models.CharField(max_length=10)
+    imgData = models.ImageField()
+    label = models.CharField(max_length=10)
 
 class School(models.Model):
-    name = models.CharField(max_length=20)
-    email_info = models.CharField(max_length=10)
+    name = models.CharField(max_length=20, primary_key=True)
+    email_info = models.CharField(max_length=20)
 
 class Mbti(models.Model):
     name = models.CharField(max_length=6, primary_key=True)
