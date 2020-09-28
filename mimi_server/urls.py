@@ -21,4 +21,5 @@ urlpatterns = [
     # path('admin/', admin.site.urls),
     # url(r'^', include('mimi_server.apps.tutorials.urls')),
     path('api/v1/user/', include('mimi_server.apps.user.urls')),
+    path('mail/', include('mimi_server.apps.mail.urls')),
 ]

@@ -38,8 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'mimi_server.apps.user',
-    # 'mimi_server.apps.meeting',
-    # 'mimi_server.apps.tutorials',
+    'mimi_server.apps.mail',
     'rest_framework',
     # CORS
     'corsheaders',
@@ -62,6 +61,14 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'mimi_server.urls'
 
+#DataFlair
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_USE_TLS = True
+EMAIL_PORT = 587
+EMAIL_HOST_USER = os.environ["GMAIL_ID"]
+EMAIL_HOST_PASSWORD = os.environ["GMAIL_PW"]
+
 CORS_ORIGIN_ALLOW_ALL = False
 CORS_ORIGIN_WHITELIST = (
     'http://localhost:8080',
@@ -70,7 +77,7 @@ CORS_ORIGIN_WHITELIST = (
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'template')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
