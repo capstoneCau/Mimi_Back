@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 """
 
 import os
+import secret
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -25,7 +26,7 @@ SECRET_KEY = 'o)3u#g2j55cey$5#@yusmnsu933ti+v(voi3=xc-!vlv%he0v5'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = secret.ALLOWED_HOSTS
 
 
 # Application definition
@@ -38,7 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'mimi_server.apps.user',
-    'mimi_server.apps.mail',
+    # 'mimi_server.apps.meeting',
     'rest_framework',
     # CORS
     'corsheaders',
@@ -61,14 +62,6 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'mimi_server.urls'
 
-#DataFlair
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_USE_TLS = True
-EMAIL_PORT = 587
-EMAIL_HOST_USER = os.environ["GMAIL_ID"]
-EMAIL_HOST_PASSWORD = os.environ["GMAIL_PW"]
-
 CORS_ORIGIN_ALLOW_ALL = False
 CORS_ORIGIN_WHITELIST = (
     'http://localhost:8080',
@@ -77,7 +70,7 @@ CORS_ORIGIN_WHITELIST = (
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'template')],
+        'DIRS': [],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -93,19 +86,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'mimi_server.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/2.2/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'mimi',
-        'USER': 'postgres',
-        'PASSWORD': '1111',
-        'HOST': '127.0.0.1',
-        'PORT': '5432',
-    }
-}
+DATABASES = secret.DATABASES
 
 
 # Password validation
