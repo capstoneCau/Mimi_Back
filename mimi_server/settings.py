@@ -62,6 +62,15 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'mimi_server.urls'
 
+# Email
+EMAIL_BACKEND       = secret.EMAIL['EMAIL_BACKEND']
+EMAIL_USE_TLS       = secret.EMAIL['EMAIL_USE_TLS']      
+EMAIL_PORT          = secret.EMAIL['EMAIL_PORT']                
+EMAIL_HOST          = secret.EMAIL['EMAIL_HOST']
+EMAIL_HOST_USER     = secret.EMAIL['EMAIL_HOST_USER']
+EMAIL_HOST_PASSWORD = secret.EMAIL['EMAIL_HOST_PASSWORD']
+SERVER_EMAIL        = secret.EMAIL['SERVER_EMAIL']
+
 CORS_ORIGIN_ALLOW_ALL = False
 CORS_ORIGIN_WHITELIST = (
     'http://localhost:8080',
@@ -70,7 +79,7 @@ CORS_ORIGIN_WHITELIST = (
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'template')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
