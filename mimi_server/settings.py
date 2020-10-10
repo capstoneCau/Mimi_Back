@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'mimi_server.apps.user',
     # 'mimi_server.apps.meeting',
+    'mimi_server.apps.mail',
     'rest_framework',
     # CORS
     'corsheaders',
