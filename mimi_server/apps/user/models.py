@@ -3,7 +3,7 @@ from django.contrib.auth.models import (AbstractUser, BaseUserManager)
 # Create your models here.
 class UserManager(BaseUserManager):
 
-    def create_user(self, kakao_auth_id, name, gender, birthday, address, email, school, profileImg, mbti, kakao_id):
+    def create_user(self, kakao_auth_id, name, gender, birthday, address, email, school, profileImg, mbti, star, kakao_id):
         user = self.model(
             kakao_auth_id=kakao_auth_id,
             name=name,
@@ -14,13 +14,15 @@ class UserManager(BaseUserManager):
             school=school,
             profileImg=profileImg,
             mbti=mbti,
-            kakao_id=kakao_id
+            star=star,
+            kakao_id=kakao_id,
+            
         )
 
         return user
 
-    def create_superuser(self, kakao_auth_id, name, gender, birthday, address, email, school, profileImg, mbti, kakao_id):
-        user = self.create_user(kakao_auth_id, name, gender, birthday, address, email, school, profileImg, mbti, kakao_id)
+    def create_superuser(self, kakao_auth_id, name, gender, birthday, address, email, school, profileImg, mbti, star, kakao_id):
+        user = self.create_user(kakao_auth_id, name, gender, birthday, address, email, school, profileImg, mbti, star, kakao_id)
         user.is_superuser = True
         user.is_staff = True
         user.save()
@@ -39,6 +41,11 @@ class Mbti(models.Model):
     name = models.CharField(max_length=6, primary_key=True)
     description = models.TextField()
 
+class Star(models.Model):
+    name = models.CharField(max_length=10, primary_key=True)
+    start_date = models.CharField(max_length=5)
+    end_date = models.CharField(max_length=5)
+
 class User(AbstractUser):
     username = None
     kakao_auth_id = models.CharField(max_length=20, unique=True, primary_key=True)
@@ -50,6 +57,7 @@ class User(AbstractUser):
     school = models.ForeignKey(School, on_delete=models.CASCADE, verbose_name="학교")
     profileImg = models.ForeignKey(Animal, on_delete=models.CASCADE, verbose_name="프로필 사진")
     mbti = models.ForeignKey(Mbti, on_delete=models.CASCADE, verbose_name="mbti 성향")
+    star = models.ForeignKey(Star, on_delete=models.CASCADE, verbose_name="별자리")
     kakao_id = models.CharField(max_length=20, default=None, null=True, blank=True)
     friends = models.ManyToManyField('self', symmetrical=False, through='Friends', related_name='+')
 

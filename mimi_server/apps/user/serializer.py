@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Animal, School, Mbti, Friends
+from .models import User, Animal, School, Mbti, Friends, Star
 
 class AnimalSerializer(serializers.ModelSerializer):
     class Meta:
@@ -15,6 +15,11 @@ class MbtiSerializer(serializers.ModelSerializer):
     class Meta:
         model = Mbti
         fields = ['name', 'description']
+
+class StarSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Star
+        fields = ['name', 'start_date', 'end_date']
     
 
 
@@ -23,7 +28,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['kakao_auth_id', 'name', 'gender', 'birthday', 'address','email', 'school',
-        'profileImg', 'mbti', 'kakao_id']
+        'profileImg', 'mbti', 'star', 'kakao_id']
         # fields = '__all__'
         lookup_field = 'kakao_auth_id'
         extra_kwargs = {
