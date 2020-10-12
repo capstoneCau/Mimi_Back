@@ -22,4 +22,5 @@ urlpatterns = [
     # url(r'^', include('mimi_server.apps.tutorials.urls')),
     path('api/v1/user/', include('mimi_server.apps.user.urls')),
     path('mail/', include('mimi_server.apps.mail.urls')),
+    path('meeting/', include('mimi_server.apps.meeting.urls'))
 ]
