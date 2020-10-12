@@ -40,3 +40,21 @@ class UserSerializer(serializers.ModelSerializer):
         user.set_password("mimi")
         user.save()
         return user
+
+class UserField(serializers.PrimaryKeyRelatedField):
+
+    def to_representation(self, value):
+        id = super(UserField, self).to_representation(value)
+        try:
+          user = User.objects.get(pk=id)
+          serializer = UserSerializer(user)
+          return serializer.data
+        except User.DoesNotExist:
+            return None
+
+    def get_choices(self, cutoff=None):
+        queryset = self.get_queryset()
+        if queryset is None:
+            return {}
+
+        return OrderedDict([(item.id, self.display_value(item)) for item in queryset])
