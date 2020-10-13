@@ -127,7 +127,8 @@ class MeetingCreateRequestViewSet(mixins.CreateModelMixin, mixins.UpdateModelMix
         if request.data["is_accepted"] not in ['a', 'r'] :
             return Response({"detail" : "Invalid input. is_accepted can only be'a' or 'r'."}, status=status.HTTP_400_BAD_REQUEST)
         
-        if request.data["is_accepted"] != None :
+        if request.data["is_accepted"] == None :
+            print(request.data)
             return Response({"detail" : "is_accepted does not exist."}, status=status.HTTP_400_BAD_REQUEST)
         
         if len(request.data) > 1 :
@@ -146,10 +147,11 @@ class MeetingCreateRequestViewSet(mixins.CreateModelMixin, mixins.UpdateModelMix
             instance._prefetched_objects_cache = {}
         room = room = Room.objects.filter(Q(id=room_id))
         if request.data["is_accepted"] == 'r' :
-            room.update({
+            updatedData = {
                 "status" : 'c'
-            })
-            return Response(room, status=status.HTTP_205_RESET_CONTENT)
+            }
+            room.update(**updatedData)
+            return Response(RoomSerializer(room.first()).data, status=status.HTTP_205_RESET_CONTENT)
 
         allRequestList = FriendsParticipation.objects.filter(Q(room=room_id))
         isAllAccept = True
@@ -157,12 +159,13 @@ class MeetingCreateRequestViewSet(mixins.CreateModelMixin, mixins.UpdateModelMix
             isAllAccept &= (e.is_accepted == 'a')
 
         if isAllAccept : 
-            room.update({
+            updatedData = {
                 'status' : 'a'
-            })
+            }
+            room.update(**updatedData)
             room = room.first()
             for e in allRequestList:
-                user = User.objects.filter(Q(kakao_auth_id=e.to_user))
+                user = User.objects.filter(Q(kakao_auth_id=e.to_user)).first()
                 meetingInfo = {
                     "room" : room,
                     "user" : user,
@@ -170,7 +173,7 @@ class MeetingCreateRequestViewSet(mixins.CreateModelMixin, mixins.UpdateModelMix
                     "user_role" : 'g'
                 }
                 Meeting.objects.create(**meetingInfo)
-            user = User.objects.filter(Q(kakao_auth_id=e.from_user))
+            user = User.objects.filter(Q(kakao_auth_id=e.from_user)).first()
             meetingInfo = {
                 "room" : room,
                 "user" : user,
@@ -178,7 +181,7 @@ class MeetingCreateRequestViewSet(mixins.CreateModelMixin, mixins.UpdateModelMix
                 "user_role" : 'a' if e.type == 'c' else 'g'
             }
             Meeting.objects.create(**meetingInfo)
-            
+
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def destroy(self, request, *args, **kwargs):
