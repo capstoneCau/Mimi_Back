@@ -122,17 +122,17 @@ class MeetingCreateRequestViewSet(mixins.CreateModelMixin, mixins.UpdateModelMix
     def update(self, request, *args, **kwargs):
         room_id, from_user_id, to_user_id = kwargs["pk"].split(":")
         if Room.objects.filter(Q(id=room_id)).first().status == 'c' :
-            return Response({"detail" : "The requested room has been cancelled."}, status=status.HTTP_406_NOT_ACCEPTABLE)
+            return Response({"detail" : "The requested room has been cancelled.", "error" : 406}, status=status.HTTP_406_NOT_ACCEPTABLE)
 
         if request.data["is_accepted"] not in ['a', 'r'] :
-            return Response({"detail" : "Invalid input. is_accepted can only be'a' or 'r'."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail" : "Invalid input. is_accepted can only be'a' or 'r'.", "error" : 400, status=status.HTTP_400_BAD_REQUEST)
         
         if request.data["is_accepted"] == None :
             print(request.data)
-            return Response({"detail" : "is_accepted does not exist."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail" : "is_accepted does not exist.", "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
         
         if len(request.data) > 1 :
-            return Response({"detail" : "Too many parameters."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail" : "Too many parameters.", "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
 
         partial = kwargs.pop('partial', False)
         instance = FriendsParticipation.objects.select_related('room', 'from_user', 'to_user').filter(Q(from_user_id=from_user_id) & Q(room=room_id) & Q(to_user_id=to_user_id)).first()
