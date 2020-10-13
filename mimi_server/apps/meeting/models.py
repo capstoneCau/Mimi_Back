@@ -54,10 +54,10 @@ class Meeting(models.Model):
         (USER_ROLE_GUEST, '참여자'),
     )
 
-    TYPE_REQUEST = 'r'
+    TYPE_REQUEST = 'p'
     TYPE_CREATE = 'c'
     CHOICES_TYPE = (
-        (TYPE_REQUEST, '요청'),
+        (TYPE_REQUEST, '신청'),
         (TYPE_CREATE, '생성'),
     )
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name="meeting_room_id")
