@@ -28,10 +28,12 @@ class Room(models.Model):
     STATUS_WATING = 'w'
     STATUS_MATCHED = 'm'
     STATUS_ACTIVE = 'a'
+    STATUS_CANCELED = 'c'
     CHOICE_STATUS = (
         (STATUS_WATING, 'wating'),
         (STATUS_MATCHED, 'matched'),
         (STATUS_ACTIVE, 'active'),
+        (STATUS_CANCELED, 'canceled'),
     )
     reg_time = models.DateTimeField(auto_now_add=True, )
     upd_time = models.DateTimeField(auto_now=True)
