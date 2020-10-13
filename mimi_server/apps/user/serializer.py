@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import User, Animal, School, Mbti, Friends, Star
-
+from collections import OrderedDict
 class AnimalSerializer(serializers.ModelSerializer):
     class Meta:
         model = Animal
@@ -57,4 +57,4 @@ class UserField(serializers.PrimaryKeyRelatedField):
         if queryset is None:
             return {}
 
-        return OrderedDict([(item.id, self.display_value(item)) for item in queryset])
+        return OrderedDict([(item.kakao_auth_id, self.display_value(item)) for item in queryset])
