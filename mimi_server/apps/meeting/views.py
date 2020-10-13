@@ -29,6 +29,7 @@ class AllRoomViewSet(mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet):
         request_user_id =  request.data.pop('request_user_id')
 
         createdRoom = Room.objects.create(**request.data)
+        from_user = User.objects.filter(Q(kakao_auth_id=request_user_id)).first()
         keys = list(request.data.keys())
         for key in keys :
             request.data.pop(key)
@@ -36,11 +37,11 @@ class AllRoomViewSet(mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet):
         for user_id in init_users:
             request.data.update({
                 "room" : createdRoom,
-                "user" : User.objects.filter(Q(kakao_auth_id=user_id)).first(),
-                "user_role" : "a" if user_id == request_user_id else "g",
-                "type" : "c"
+                "from_user" : from_user,
+                "to_user" : User.objects.filter(Q(kakao_auth_id=user_id)).first(),
+                "type" : "c",
             })
-            Meeting.objects.create(**request.data)
+            FriendsParticipation.objects.create(**request.data)
         
         return createdRoom
 
@@ -120,6 +121,18 @@ class MeetingCreateRequestViewSet(mixins.CreateModelMixin, mixins.UpdateModelMix
 
     def update(self, request, *args, **kwargs):
         room_id, from_user_id, to_user_id = kwargs["pk"].split(":")
+        if Room.objects.filter(Q(id=room_id)).first().status == 'c' :
+            return Response({"detail" : "The requested room has been cancelled."}, status=status.HTTP_406_NOT_ACCEPTABLE)
+
+        if request.data["is_accepted"] not in ['a', 'r'] :
+            return Response({"detail" : "Invalid input. is_accepted can only be'a' or 'r'."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if request.data["is_accepted"] != None :
+            return Response({"detail" : "is_accepted does not exist."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if len(request.data) > 1 :
+            return Response({"detail" : "Too many parameters."}, status=status.HTTP_400_BAD_REQUEST)
+
         partial = kwargs.pop('partial', False)
         instance = FriendsParticipation.objects.select_related('room', 'from_user', 'to_user').filter(Q(from_user_id=from_user_id) & Q(room=room_id) & Q(to_user_id=to_user_id)).first()
         
@@ -131,7 +144,41 @@ class MeetingCreateRequestViewSet(mixins.CreateModelMixin, mixins.UpdateModelMix
             # If 'prefetch_related' has been applied to a queryset, we need to
             # forcibly invalidate the prefetch cache on the instance.
             instance._prefetched_objects_cache = {}
+        room = room = Room.objects.filter(Q(id=room_id))
+        if request.data["is_accepted"] == 'r' :
+            room.update({
+                "status" : 'c'
+            })
+            return Response(room, status=status.HTTP_205_RESET_CONTENT)
 
+        allRequestList = FriendsParticipation.objects.filter(Q(room=room_id))
+        isAllAccept = True
+        for e in allRequestList:
+            isAllAccept &= (e.is_accepted == 'a')
+
+        if isAllAccept : 
+            room.update({
+                'status' : 'a'
+            })
+            room = room.first()
+            for e in allRequestList:
+                user = User.objects.filter(Q(kakao_auth_id=e.to_user))
+                meetingInfo = {
+                    "room" : room,
+                    "user" : user,
+                    "type" : e.type,
+                    "user_role" : 'g'
+                }
+                Meeting.objects.create(**meetingInfo)
+            user = User.objects.filter(Q(kakao_auth_id=e.from_user))
+            meetingInfo = {
+                "room" : room,
+                "user" : user,
+                "type" : e.type,
+                "user_role" : 'a' if e.type == 'c' else 'g'
+            }
+            Meeting.objects.create(**meetingInfo)
+            
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def destroy(self, request, *args, **kwargs):
