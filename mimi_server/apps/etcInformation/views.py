@@ -41,14 +41,3 @@ class StarCompatibilityViewSet(viewsets.ReadOnlyModelViewSet) :
 class ZodiacCompatibilityViewSet(viewsets.ReadOnlyModelViewSet) :
     queryset = ZodiacCompatibility.objects.all()
     serializer_class = ZodiacCompatibilitySerializer
-           
-    
-
-def getModel(_type) :
-    _type = _type.lower()
-    if _type == 'mbti' :
-        return MbtiCompatibility
-    elif _type == 'star' :
-        return StarCompatibility
-    elif _type == 'zodiac' :
-        return ZodiacCompatibility
