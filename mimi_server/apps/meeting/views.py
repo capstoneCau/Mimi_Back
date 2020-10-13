@@ -125,7 +125,7 @@ class MeetingCreateRequestViewSet(mixins.CreateModelMixin, mixins.UpdateModelMix
             return Response({"detail" : "The requested room has been cancelled.", "error" : 406}, status=status.HTTP_406_NOT_ACCEPTABLE)
 
         if request.data["is_accepted"] not in ['a', 'r'] :
-            return Response({"detail" : "Invalid input. is_accepted can only be'a' or 'r'.", "error" : 400, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail" : "Invalid input. is_accepted can only be'a' or 'r'.", "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
         
         if request.data["is_accepted"] == None :
             print(request.data)
