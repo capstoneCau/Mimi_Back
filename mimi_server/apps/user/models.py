@@ -3,7 +3,7 @@ from django.contrib.auth.models import (AbstractUser, BaseUserManager)
 # Create your models here.
 class UserManager(BaseUserManager):
 
-    def create_user(self, kakao_auth_id, name, gender, birthday, address, email, school, profileImg, kakao_id, mbti=None, star=None, chinese_zodiac=None):
+    def create_user(self, kakao_auth_id, name, gender, birthday, address, email, school, profileImg, mbti=None, star=None, chinese_zodiac=None):
         user = self.model(
             kakao_auth_id=kakao_auth_id,
             name=name,
@@ -16,13 +16,12 @@ class UserManager(BaseUserManager):
             mbti=mbti,
             star=star,
             chinese_zodiac=chinese_zodiac,
-            kakao_id=kakao_id,
         )
 
         return user
 
-    def create_superuser(self, kakao_auth_id, name, gender, birthday, address, email, school, profileImg, kakao_id, mbti, star, chinese_zodiac):
-        user = self.create_user(kakao_auth_id, name, gender, birthday, address, email, school, profileImg, kakao_id, mbti, star, chinese_zodiac)
+    def create_superuser(self, kakao_auth_id, name, gender, birthday, address, email, school, profileImg, mbti, star, chinese_zodiac):
+        user = self.create_user(kakao_auth_id, name, gender, birthday, address, email, school, profileImg, mbti, star, chinese_zodiac)
         user.is_superuser = True
         user.is_staff = True
         user.save()
@@ -44,7 +43,6 @@ class User(AbstractUser):
     mbti = models.ForeignKey("etcInformation.Mbti", null=True, on_delete=models.CASCADE, verbose_name="mbti 성향")
     star = models.ForeignKey("etcInformation.Star", null=True, on_delete=models.CASCADE, verbose_name="별자리")
     chinese_zodiac = models.ForeignKey("etcInformation.ChineseZodiac", null=True,  on_delete=models.CASCADE, verbose_name="별자리")
-    kakao_id = models.CharField(max_length=20, default=None, null=True, blank=True)
     friends = models.ManyToManyField('self', symmetrical=False, through='Friends', related_name='+')
     friends_participation = models.ManyToManyField('self', symmetrical=False, through='FriendsParticipation')
     USERNAME_FIELD = 'kakao_auth_id'
