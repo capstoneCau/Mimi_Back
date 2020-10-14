@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'mimi_server.apps.user',
     'mimi_server.apps.meeting',
     'mimi_server.apps.mail',
+    'mimi_server.apps.etcInformation',
     'rest_framework',
     # CORS
     'corsheaders',
