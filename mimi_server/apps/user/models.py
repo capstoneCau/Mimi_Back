@@ -3,7 +3,7 @@ from django.contrib.auth.models import (AbstractUser, BaseUserManager)
 # Create your models here.
 class UserManager(BaseUserManager):
 
-    def create_user(self, kakao_auth_id, name, gender, birthday, address, email, school, profileImg, mbti, star, chinese_zodiac, kakao_id):
+    def create_user(self, kakao_auth_id, name, gender, birthday, address, email, school, profileImg, kakao_id, mbti=None, star=None, chinese_zodiac=None):
         user = self.model(
             kakao_auth_id=kakao_auth_id,
             name=name,
@@ -21,8 +21,8 @@ class UserManager(BaseUserManager):
 
         return user
 
-    def create_superuser(self, kakao_auth_id, name, gender, birthday, address, email, school, profileImg, mbti, star, chinese_zodiac, kakao_id):
-        user = self.create_user(kakao_auth_id, name, gender, birthday, address, email, school, profileImg, mbti, star, chinese_zodiac, kakao_id)
+    def create_superuser(self, kakao_auth_id, name, gender, birthday, address, email, school, profileImg, kakao_id, mbti, star, chinese_zodiac):
+        user = self.create_user(kakao_auth_id, name, gender, birthday, address, email, school, profileImg, kakao_id, mbti, star, chinese_zodiac)
         user.is_superuser = True
         user.is_staff = True
         user.save()
@@ -41,9 +41,9 @@ class User(AbstractUser):
     email = models.EmailField(unique=True, verbose_name="학교 이메일")
     school = models.ForeignKey("etcInformation.School", on_delete=models.CASCADE, verbose_name="학교")
     profileImg = models.ForeignKey("etcInformation.Animal", on_delete=models.CASCADE, verbose_name="프로필 사진")
-    mbti = models.ForeignKey("etcInformation.Mbti", on_delete=models.CASCADE, verbose_name="mbti 성향")
-    star = models.ForeignKey("etcInformation.Star", on_delete=models.CASCADE, verbose_name="별자리")
-    chinese_zodiac = models.ForeignKey("etcInformation.ChineseZodiac", on_delete=models.CASCADE, verbose_name="별자리")
+    mbti = models.ForeignKey("etcInformation.Mbti", null=True, on_delete=models.CASCADE, verbose_name="mbti 성향")
+    star = models.ForeignKey("etcInformation.Star", null=True, on_delete=models.CASCADE, verbose_name="별자리")
+    chinese_zodiac = models.ForeignKey("etcInformation.ChineseZodiac", null=True,  on_delete=models.CASCADE, verbose_name="별자리")
     kakao_id = models.CharField(max_length=20, default=None, null=True, blank=True)
     friends = models.ManyToManyField('self', symmetrical=False, through='Friends', related_name='+')
     friends_participation = models.ManyToManyField('self', symmetrical=False, through='FriendsParticipation')
