@@ -8,15 +8,14 @@ from ..user.models import User
 from rest_framework import viewsets, status, mixins
 from rest_framework.decorators import api_view
 from django.utils.datastructures import MultiValueDictKeyError
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly
 
 from .serializer import RoomSerializer, MeetingSerializer, RoomMeetingSerializer, \
     FriendsParticipationSerializer, ParticipationRoomUserSerializer
 
 class AllRoomViewSet(mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet):
     serializer_class = RoomSerializer
-    # permission_classes = (IsAuthenticated, )
     
-
     def get_queryset(self):
         lookup_field = 'id'
         # queryset = Room.objects.filter(status='a')
@@ -24,24 +23,21 @@ class AllRoomViewSet(mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet):
         return queryset
 
     def create(self, request, *args, **kwargs):
-        # print(self.request.user, request.user)
         init_users = request.data.pop('init_users')
-        request_user_id =  request.data.pop('request_user_id')
-
+        if request.user in init_users :
+            return Response({"detail" : "The room creator has been invited.", "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
+        
+        from_user = User.objects.filter(Q(kakao_auth_id=request.user)).first()
         createdRoom = Room.objects.create(**request.data)
-        from_user = User.objects.filter(Q(kakao_auth_id=request_user_id)).first()
-        keys = list(request.data.keys())
-        for key in keys :
-            request.data.pop(key)
 
         for user_id in init_users:
-            request.data.update({
+            createdData = {
                 "room" : createdRoom,
                 "from_user" : from_user,
                 "to_user" : User.objects.filter(Q(kakao_auth_id=user_id)).first(),
                 "type" : "c",
-            })
-            FriendsParticipation.objects.create(**request.data)
+            }
+            FriendsParticipation.objects.create(**createdData)
         
         return createdRoom
 
@@ -51,12 +47,12 @@ class MyRoomViewSet(viewsets.ReadOnlyModelViewSet) :
 
     def get_queryset(self):
         try:
-            user_id, room_id = self.request.data['user_id'], self.request.data['room_id']
-            queryset = Meeting.objects.select_related('room').filter(Q(user=user_id) & Q(room=room_id))
-            print(queryset)
+            room_id = self.request.data['room_id']
+            queryset = Meeting.objects.select_related('room').filter(Q(user=self.request.user) & Q(room=room_id))
             return queryset
+
         except (MultiValueDictKeyError, KeyError) :
-            return Meeting.objects.select_related('room')
+            return Meeting.objects.select_related('room').filter(Q(user=self.request.user))
     
     # def update(self, request, *args, **kwargs):
     #     user_id, room_id = kwargs["pk"].split(":")
@@ -74,7 +70,7 @@ class MyRoomViewSet(viewsets.ReadOnlyModelViewSet) :
         #     instance._prefetched_objects_cache = {}
 
         # return Response(serializer.data)
-        return Response(status=status.HTTP_200_OK)
+        # return Response(status=status.HTTP_200_OK)
     
 
 class MeetingCreateRequestViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
@@ -82,10 +78,9 @@ class MeetingCreateRequestViewSet(mixins.CreateModelMixin, mixins.UpdateModelMix
 
     def get_queryset(self):
         try:
-            from_user_id, to_user_id, room_id, _type = self.request.data['from_user_id'], self.request.data['to_user_id'], \
-                self.request.data['room_id'], self.request.data['type']
-            print(from_user_id, to_user_id, room_id, _type)
-            queryset = FriendsParticipation.objects.select_related('room', 'from_user').filter(Q(type=_type))
+            to_user_id, room_id, _type = self.request.data['to_user_id'], self.request.data['room_id'], self.request.data['type']
+            queryset = FriendsParticipation.objects.select_related('room', 'from_user').filter(Q(type=_type) & Q(from_user=self.request.user) & \
+                Q(to_user=to_user_id) & Q(room=room_id))
             return queryset
         except (MultiValueDictKeyError, KeyError) :
             return FriendsParticipation.objects.select_related('room', 'from_user')
@@ -94,15 +89,18 @@ class MeetingCreateRequestViewSet(mixins.CreateModelMixin, mixins.UpdateModelMix
         participation_user_list = request.data.pop('participation_user_list')
         if len(set(participation_user_list)) != len(participation_user_list) :
             return Response({"detail" : "Duplicate users have been added.", "error" : "404"}, status=status.HTTP_400_BAD_REQUEST)
+
         request.data.update({
-            "from_user" : User.objects.filter(Q(kakao_auth_id=request.data["from_user"])).first(),
+            "from_user" : User.objects.filter(Q(kakao_auth_id=request.user)).first(),
             "room" : Room.objects.filter(Q(id=request.data["room"])).first()
         })
+        
         instanceList = []
         if len(participation_user_list) > request.data["room"].user_limit:
             return Response({"detail": "You have exceeded the room limit.", "error" : "400"}, status=status.HTTP_400_BAD_REQUEST)
+
         for user_id in participation_user_list :
-            if request.data["from_user"] == user_id:
+            if request.user == user_id:
                 return Response({"detail":"The invited user and the invited user are the same.",
                 "error" : "400"}, status=status.HTTP_400_BAD_REQUEST)
             instance = User.objects.filter(Q(kakao_auth_id=user_id)).first()
@@ -120,7 +118,7 @@ class MeetingCreateRequestViewSet(mixins.CreateModelMixin, mixins.UpdateModelMix
         return Response({"result" : True}, status=status.HTTP_201_CREATED)
 
     def update(self, request, *args, **kwargs):
-        room_id, from_user_id, to_user_id = kwargs["pk"].split(":")
+        room_id, to_user_id = kwargs["pk"].split(":")
         if Room.objects.filter(Q(id=room_id)).first().status == 'c' :
             return Response({"detail" : "The requested room has been cancelled.", "error" : 406}, status=status.HTTP_406_NOT_ACCEPTABLE)
 
@@ -135,7 +133,7 @@ class MeetingCreateRequestViewSet(mixins.CreateModelMixin, mixins.UpdateModelMix
             return Response({"detail" : "Too many parameters.", "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
 
         partial = kwargs.pop('partial', False)
-        instance = FriendsParticipation.objects.select_related('room', 'from_user', 'to_user').filter(Q(from_user_id=from_user_id) & Q(room=room_id) & Q(to_user_id=to_user_id)).first()
+        instance = FriendsParticipation.objects.select_related('room', 'from_user', 'to_user').filter(Q(from_user_id=request.user) & Q(room=room_id) & Q(to_user_id=to_user_id)).first()
         
         serializer = FriendsParticipationSerializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
@@ -185,8 +183,8 @@ class MeetingCreateRequestViewSet(mixins.CreateModelMixin, mixins.UpdateModelMix
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def destroy(self, request, *args, **kwargs):
-        room_id, from_user_id, to_user_id = kwargs["pk"].split(":")
-        instance = instance = FriendsParticipation.objects.select_related('room', 'from_user', 'to_user').filter(Q(from_user_id=from_user_id) & Q(room=room_id) & Q(to_user_id=to_user_id)).first()
+        room_id, to_user_id = kwargs["pk"].split(":")
+        instance = instance = FriendsParticipation.objects.select_related('room', 'from_user', 'to_user').filter(Q(from_user_id=request.user) & Q(room=room_id) & Q(to_user_id=to_user_id)).first()
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
         
