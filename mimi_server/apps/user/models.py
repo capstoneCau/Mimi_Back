@@ -3,13 +3,14 @@ from django.contrib.auth.models import (AbstractUser, BaseUserManager)
 # Create your models here.
 class UserManager(BaseUserManager):
 
-    def create_user(self, kakao_auth_id, name, gender, birthday, address, email, school, profileImg, mbti=None, star=None, chinese_zodiac=None):
+    def create_user(self, kakao_auth_id, name, gender, birthday, email, school, profileImg, latitude=None, longitude=None, mbti=None, star=None, chinese_zodiac=None):
         user = self.model(
             kakao_auth_id=kakao_auth_id,
             name=name,
             gender=gender,
             birthday=birthday,
-            address=address,
+            latitude=latitude,
+            longitude=longitude,
             email=email,
             school=school,
             profileImg=profileImg,
@@ -20,8 +21,8 @@ class UserManager(BaseUserManager):
 
         return user
 
-    def create_superuser(self, kakao_auth_id, name, gender, birthday, address, email, school, profileImg, mbti, star, chinese_zodiac):
-        user = self.create_user(kakao_auth_id, name, gender, birthday, address, email, school, profileImg, mbti, star, chinese_zodiac)
+    def create_superuser(self, kakao_auth_id, name, gender, birthday, email, school, profileImg, latitude, longitude, mbti, star, chinese_zodiac):
+        user = self.create_user(kakao_auth_id, name, gender, birthday, email, school, profileImg, latitude, longitude, mbti, star, chinese_zodiac)
         user.is_superuser = True
         user.is_staff = True
         user.save()
@@ -31,18 +32,26 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractUser):
+    GENDER_MALE = 'male'
+    GENDER_FEMALE = 'female'
+    CHOICE_GENDER = (
+        (GENDER_MALE, '남성'),
+        (GENDER_FEMALE, '여성')
+    )
     username = None
     kakao_auth_id = models.CharField(max_length=20, unique=True, primary_key=True)
     name = models.CharField(max_length=6, verbose_name="이름")
-    gender = models.BooleanField(verbose_name="성별")
+    gender = models.CharField(max_length=6, verbose_name="성별", choices=CHOICE_GENDER)
     birthday = models.DateField(verbose_name="생년월일")
-    address = models.TextField(verbose_name="집 주소")
+    latitude = models.FloatField(null=True)
+    longitude = models.FloatField(null=True)
     email = models.EmailField(unique=True, verbose_name="학교 이메일")
     school = models.ForeignKey("etcInformation.School", on_delete=models.CASCADE, verbose_name="학교")
     profileImg = models.ForeignKey("etcInformation.Animal", on_delete=models.CASCADE, verbose_name="프로필 사진")
     mbti = models.ForeignKey("etcInformation.Mbti", null=True, on_delete=models.CASCADE, verbose_name="mbti 성향")
     star = models.ForeignKey("etcInformation.Star", null=True, on_delete=models.CASCADE, verbose_name="별자리")
     chinese_zodiac = models.ForeignKey("etcInformation.ChineseZodiac", null=True,  on_delete=models.CASCADE, verbose_name="별자리")
+
     friends = models.ManyToManyField('self', symmetrical=False, through='Friends', related_name='+')
     friends_participation = models.ManyToManyField('self', symmetrical=False, through='FriendsParticipation')
     USERNAME_FIELD = 'kakao_auth_id'
