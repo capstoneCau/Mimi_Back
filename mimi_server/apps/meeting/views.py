@@ -83,7 +83,7 @@ class MeetingCreateRequestViewSet(mixins.CreateModelMixin, mixins.UpdateModelMix
                 Q(to_user=to_user_id) & Q(room=room_id))
             return queryset
         except (MultiValueDictKeyError, KeyError) :
-            return FriendsParticipation.objects.select_related('room', 'from_user')
+            return FriendsParticipation.objects.select_related('room', 'from_user').filter(Q(from_user=self.request.user))
 
     def create(self, request, *args, **kwargs):
         participation_user_list = request.data.pop('participation_user_list')
