@@ -53,7 +53,7 @@ class User(AbstractUser):
     chinese_zodiac = models.ForeignKey("etcInformation.ChineseZodiac", null=True,  on_delete=models.CASCADE, verbose_name="별자리")
 
     friends = models.ManyToManyField('self', symmetrical=False, through='Friends', related_name='+')
-    friends_participation = models.ManyToManyField('self', symmetrical=False, through='FriendsParticipation')
+    
     USERNAME_FIELD = 'kakao_auth_id'
     REQUIRED_FIELDS = []
 
@@ -90,37 +90,5 @@ class Friends(models.Model):
     # 서로의 관계를 표현하기 위한 필드
     type = models.CharField(max_length=1, choices=CHOICES_TYPE)
 
-class FriendsParticipation(models.Model) :
-    TYPE_PARTICIPATE = 'p'
-    TYPE_CREATE = 'c'
-    CHOICES_TYPE = (
-        (TYPE_PARTICIPATE, '신청'),
-        (TYPE_CREATE, '생성'),
-    )
 
-    REQUEST_ACCEPTED = 'a'
-    REQUEST_REJECTED = 'r'
-    REQUEST_WAITING = 'w'
-    CHOICES_REQUEST = (
-        (REQUEST_ACCEPTED, '수락'),
-        (REQUEST_REJECTED, '거절'),
-        (REQUEST_WAITING, '대기'),
-    )
-    
-    
-    room = models.ForeignKey("meeting.Room", on_delete=models.CASCADE, related_name="request_room_id")
-    inviter_user = models.ForeignKey(
-        User, 
-        on_delete=models.CASCADE,
-        related_name="request_inviter_user"
-        )
-    invitee_user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name='request_invitee_user',
-    )
-    type = models.CharField(max_length=1, choices=CHOICES_TYPE)
-    is_accepted = models.CharField(default='w', max_length=1, choices=CHOICES_REQUEST)
-    class Meta:
-        unique_together = (("room", "inviter_user", "invitee_user"),)
     

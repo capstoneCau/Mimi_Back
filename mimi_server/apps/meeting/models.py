@@ -43,7 +43,7 @@ class Room(models.Model):
     status = models.CharField(default='w', max_length=1, choices=CHOICE_STATUS)  # wating / matched
     
     meeting = models.ManyToManyField("user.User", through='Meeting', related_name="meeting")
-
+    friends_participation = models.ManyToManyField('user.User', through='FriendsParticipation', related_name="friends_participation")
     # objects = RoomManager()
 
 class Meeting(models.Model):
@@ -70,4 +70,37 @@ class Meeting(models.Model):
     class Meta:
         unique_together = (("room", "user"),)
 
+
+class FriendsParticipation(models.Model) :
+    TYPE_PARTICIPATE = 'p'
+    TYPE_CREATE = 'c'
+    CHOICES_TYPE = (
+        (TYPE_PARTICIPATE, '신청'),
+        (TYPE_CREATE, '생성'),
+    )
+
+    REQUEST_ACCEPTED = 'a'
+    REQUEST_REJECTED = 'r'
+    REQUEST_WAITING = 'w'
+    CHOICES_REQUEST = (
+        (REQUEST_ACCEPTED, '수락'),
+        (REQUEST_REJECTED, '거절'),
+        (REQUEST_WAITING, '대기'),
+    )
+
+    USER_ROLE_INVITER = 'inviter'
+    USER_ROLE_INVITEE = 'invitee'
+    CHOICES_ROLE = (
+        (USER_ROLE_INVITER, 'Inviter'),
+        (USER_ROLE_INVITEE, 'Invitee'),
+    )
+    
+    room = models.ForeignKey("meeting.Room", on_delete=models.CASCADE, related_name="request_room_id")
+    user = models.ForeignKey("user.User", on_delete=models.CASCADE, related_name="request_user_id")
+    
+    type = models.CharField(max_length=1, choices=CHOICES_TYPE)
+    is_accepted = models.CharField(default='w', max_length=1, choices=CHOICES_REQUEST)
+    user_role = models.CharField(max_length=7, choices=CHOICES_ROLE)
+    class Meta:
+        unique_together = (("room", "user"))
     
