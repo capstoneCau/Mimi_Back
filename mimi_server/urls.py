@@ -20,7 +20,7 @@ from django.conf.urls import url, include
 urlpatterns = [
     # path('admin/', admin.site.urls),
     # url(r'^', include('mimi_server.apps.tutorials.urls')),
-    path('api/v1/user/', include('mimi_server.apps.user.urls')),
+    path(r'api/', include('mimi_server.apps.user.urls')),
     path('mail/', include('mimi_server.apps.mail.urls')),
     path('meeting/', include('mimi_server.apps.meeting.urls')),
     path('etcInformation/', include('mimi_server.apps.etcInformation.urls'))

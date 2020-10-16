@@ -43,9 +43,19 @@ INSTALLED_APPS = [
     'mimi_server.apps.mail',
     'mimi_server.apps.etcInformation',
     'rest_framework',
+    'rest_framework.authtoken',
     # CORS
     'corsheaders',
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.TokenAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    )
+}
 
 AUTH_USER_MODEL = 'user.User'
 
