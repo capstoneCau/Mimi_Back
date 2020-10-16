@@ -2,88 +2,294 @@ from django.db.models import Q
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Room, Meeting
-from ..user.models import FriendsParticipation
+from .models import Room, Meeting, FriendsParticipation
 from ..user.models import User
+from ..user.serializer import UserSerializer
 from rest_framework import viewsets, status, mixins
 from rest_framework.decorators import api_view
 from django.utils.datastructures import MultiValueDictKeyError
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly
 
-from .serializer import RoomSerializer, MeetingSerializer, RoomMeetingSerializer, \
-    FriendsParticipationSerializer, ParticipationRoomUserSerializer
+from .serializer import RoomSerializer, MeetingRoomSerializer, MeetingUserSerializer, ParticipationRoomUserSerializer, \
+    ParticipatiedUserSerializer, ParticipatiedRoomSerializer
 
-class AllRoomViewSet(mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet):
+class RoomViewSet(mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet):
     serializer_class = RoomSerializer
     
     def get_queryset(self):
-        lookup_field = 'id'
-        # queryset = Room.objects.filter(status='a')
-        queryset = Room.objects.all() #test
-        return queryset
+        try:
+            id = self.kwargs['pk']
+            queryset = Room.objects.filter(Q(id=id)) #test
+            return queryset
+        except KeyError:
+            queryset = Room.objects.exclude(meeting=self.request.user).filter(status='a').all() #test
+            # queryset = Room.objects.all() #test
+            # print(queryset.query)
+            return queryset
 
     def create(self, request, *args, **kwargs):
         init_users = request.data.pop('init_users')
         if request.user in init_users :
             return Response({"detail" : "The room creator has been invited.", "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
+
+        if request.data["user_limit"] > len(init_users)+1 :
+            return Response({"detail" : 'The number of participants in the meeting is small. Input user_limit : ' + str(request.data["user_limit"]) + ' Init user number(Include you) : ' + str(len(init_users)+1), "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
         
-        from_user = User.objects.filter(Q(kakao_auth_id=request.user)).first()
+        if request.data["user_limit"] < len(init_users)+1 :
+            return Response({"detail" : 'The number of participants in the meeting is large. Input user_limit : ' + str(request.data["user_limit"]) + ' Init user number(Include you) : ' + str(len(init_users)+1), "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
+            
         createdRoom = Room.objects.create(**request.data)
+        
+        inviter = User.objects.filter(Q(kakao_auth_id=request.user)).first()
 
         for user_id in init_users:
             createdData = {
                 "room" : createdRoom,
-                "from_user" : from_user,
-                "to_user" : User.objects.filter(Q(kakao_auth_id=user_id)).first(),
+                "user" : User.objects.filter(Q(kakao_auth_id=user_id)).first(),
                 "type" : "c",
+                "user_role" : "invitee"
             }
             FriendsParticipation.objects.create(**createdData)
         
-        return createdRoom
+        createdData = {
+                "room" : createdRoom,
+                "user" : inviter,
+                "type" : "c",
+                "is_accepted" : "a",
+                "user_role" : "inviter"
+        }
+        FriendsParticipation.objects.create(**createdData)
 
-class MyRoomViewSet(viewsets.ReadOnlyModelViewSet) :
-    queryset = Meeting.objects.select_related('room')
-    serializer_class = RoomMeetingSerializer
+        return Response(RoomSerializer(createdRoom).data, status=status.HTTP_200_OK)
+
+class OwnsRoomViewSet(viewsets.ReadOnlyModelViewSet) :
+    serializer_class = MeetingRoomSerializer
 
     def get_queryset(self):
         try:
-            room_id = self.request.data['room_id']
-            queryset = Meeting.objects.select_related('room').filter(Q(user=self.request.user) & Q(room=room_id))
+            user = self.request.data['user']
+            return Meeting.objects.select_related('room').filter(Q(user=user))
+        except KeyError:
+            queryset = Meeting.objects.select_related('room').filter(Q(user=self.request.user))
+            print(queryset.query)
+            return queryset
+            
+
+class RoomParticipatedUserViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = MeetingUserSerializer
+
+    def get_queryset(self):
+        try:
+            room = self.request.data['room']
+            queryset = Meeting.objects.select_related('user').filter(Q(room=room))
+            print(queryset.all())
+            return queryset.all()
+        except KeyError :
+            return None
+
+class RequestUserViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = ParticipatiedUserSerializer
+
+    def get_queryset(self):
+        try:
+            request_id = self.request.data['request']
+            request = FriendsParticipation.objects.filter(Q(id=request_id)).first()
+            room_id = request.room.id
+            queryset = FriendsParticipation.objects.select_related('user').filter(Q(room=room_id) & ~Q(user=self.request.user))
+            return queryset
+        except KeyError :
+            return None
+
+class RequestRoomViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = ParticipatiedRoomSerializer
+
+    def get_queryset(self):
+        try:
+            id = self.kwargs['pk']
+            queryset = FriendsParticipation.objects.select_related('room').filter(Q(id=id))
+            return queryset
+        except KeyError :
+            return None
+    
+
+class InviteeParcitipateRequestViewSet(mixins.UpdateModelMixin, viewsets.ReadOnlyModelViewSet) :
+    serializer_class = ParticipationRoomUserSerializer
+    def get_queryset(self):
+        try:
+            id = self.kwargs['pk']
+            queryset = FriendsParticipation.objects.select_related('room', 'user').filter(Q(id=id))
+            return queryset
+        except (MultiValueDictKeyError, KeyError) :
+            return FriendsParticipation.objects.select_related('room', 'user').filter(user=self.request.user, type='p', user_role='invitee').exclude(room__status='c')
+
+    def update(self, request, *args, **kwargs):
+        instance = FriendsParticipation.objects.filter(Q(id=kwargs['pk'])).first()
+        room = Room.objects.filter(Q(id=instance.room.id))
+
+        if instance.user.kakao_auth_id != str(request.user) :
+            return Response({"detail": "User Id is different.", "error" : 401}, status=status.HTTP_401_UNAUTHORIZED)
+
+        if instance.user_role != 'invitee' :
+            return Response({"detail": "User is inviter.", "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
+
+        if instance.type != 'p' :
+            return Response({"detail" : "Request ID type is not 'p'.", "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
+
+        if instance.is_accepted != 'w' :
+            return Response({"detail" : "You have already responded, or someone on your team has declined.", "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
+
+        if room.first().status == 'c' :
+            return Response({"detail" : "The requested room has been cancelled.", "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
+
+        if room.first().status == 'm' :
+            return Response({"detail" : "The requested room has been matched.", "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
+
+        if request.data["is_accepted"] == None: 
+            return Response({"detail" : "Add the 'is_accepted' data.", "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if request.data["is_accepted"] not in ['a', 'r'] :
+            return Response({"detail" : "Invalid input. is_accepted can only be'a' or 'r'.", "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
+
+        if len(request.data) >= 2 : 
+            return Response({"detail" : "Add data only to 'is_accepted'.", "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
+
+        partial = kwargs.pop('partial', False)
+        
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        if getattr(instance, '_prefetched_objects_cache', None):
+            # If 'prefetch_related' has been applied to a queryset, we need to
+            # forcibly invalidate the prefetch cache on the instance.
+            instance._prefetched_objects_cache = {}
+
+        
+        allRequestList = FriendsParticipation.objects.filter(Q(room=instance.room.id) & Q(type='p'))
+
+        if request.data["is_accepted"] == 'r' :
+            for e in allRequestList:
+                updatedData = {
+                    "is_accepted" : 'r'
+                }
+                e.update(**updatedData)
+            return Response(RoomSerializer(room.first()).data, status=status.HTTP_205_RESET_CONTENT)
+
+        
+        isAllAccept = True
+        for e in allRequestList:
+            isAllAccept &= (e.is_accepted == 'a')
+
+        if isAllAccept : 
+            updatedData = {
+                'status' : 'm'
+            }
+            room.update(**updatedData)
+            room = room.first()
+            for e in allRequestList:
+                user = User.objects.filter(Q(kakao_auth_id=e.user.kakao_auth_id)).first()
+                meetingInfo = {
+                    "room" : room,
+                    "user" : user,
+                    "type" : e.type,
+                    "user_role" : 'g'
+                }
+                Meeting.objects.create(**meetingInfo)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class InviteeCreateRequestViewSet(mixins.UpdateModelMixin, viewsets.ReadOnlyModelViewSet) :
+    serializer_class = ParticipationRoomUserSerializer
+    def get_queryset(self):
+        try:
+            id = self.kwargs['pk']
+            queryset = FriendsParticipation.objects.select_related('room', 'user').filter(Q(id=id))
+            return queryset
+        except (MultiValueDictKeyError, KeyError) :
+            queryset = FriendsParticipation.objects.select_related('room', 'user').filter(user=self.request.user, type='c', user_role='invitee').exclude(room__status='c')
             return queryset
 
-        except (MultiValueDictKeyError, KeyError) :
-            return Meeting.objects.select_related('room').filter(Q(user=self.request.user))
-    
-    # def update(self, request, *args, **kwargs):
-    #     user_id, room_id = kwargs["pk"].split(":")
-    #     print(user_id, room_id)
-    #     partial = kwargs.pop('partial', False)
-    #     instance = Meeting.objects.select_related('room').filter(Q(user=user_id) & Q(room=room_id)).first()
-        
-    #     serializer = MeetingSerializer(instance, data=request.data, partial=partial)
-        # serializer.is_valid(raise_exception=True)
-        # self.perform_update(serializer)
+    def update(self, request, *args, **kwargs):
+        try:
+            instance = FriendsParticipation.objects.filter(Q(id=kwargs['pk'])).first()
+            # print(instance.invitee.kakao_auth_id+"||"+str(request.user)+"||")
+            if instance.user.kakao_auth_id != str(request.user) :
+                return Response({"detail": "User Id is different.", "error" : 401}, status=status.HTTP_401_UNAUTHORIZED)
 
-        # if getattr(instance, '_prefetched_objects_cache', None):
-        #     # If 'prefetch_related' has been applied to a queryset, we need to
-        #     # forcibly invalidate the prefetch cache on the instance.
-        #     instance._prefetched_objects_cache = {}
+            if instance.user_role != 'invitee' :
+                return Response({"detail": "User is inviter.", "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
 
-        # return Response(serializer.data)
-        # return Response(status=status.HTTP_200_OK)
-    
+            if instance.type != 'c' :
+                return Response({"detail" : "Request ID type is not 'c'.", "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
 
-class MeetingCreateRequestViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
+            if Room.objects.filter(Q(id=instance.room.id)).first().status == 'c' :
+                return Response({"detail" : "The requested room has been cancelled.", "error" : 406}, status=status.HTTP_400_BAD_REQUEST)
+
+            if request.data["is_accepted"] == None: 
+                return Response({"detail" : "Add the 'is_accepted' data.", "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
+            
+            if request.data["is_accepted"] not in ['a', 'r'] :
+                return Response({"detail" : "Invalid input. is_accepted can only be 'a' or 'r'.", "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
+
+            if len(request.data) >= 2 : 
+                return Response({"detail" : "Add data only to 'is_accepted'.", "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
+
+            partial = kwargs.pop('partial', False)
+            
+            serializer = self.get_serializer(instance, data=request.data, partial=partial)
+            serializer.is_valid(raise_exception=True)
+            self.perform_update(serializer)
+
+            if getattr(instance, '_prefetched_objects_cache', None):
+                # If 'prefetch_related' has been applied to a queryset, we need to
+                # forcibly invalidate the prefetch cache on the instance.
+                instance._prefetched_objects_cache = {}
+            
+            room = Room.objects.filter(Q(id=instance.room.id))
+            if request.data["is_accepted"] == 'r' :
+                updatedData = {
+                    "status" : 'c'
+                }
+                room.update(**updatedData)
+                return Response(RoomSerializer(room.first()).data, status=status.HTTP_205_RESET_CONTENT)
+            
+            allRequestList = FriendsParticipation.objects.filter(Q(room=instance.room.id) & Q(type='c'))
+            isAllAccept = True
+            for e in allRequestList:
+                isAllAccept &= (e.is_accepted == 'a')
+
+            if isAllAccept : 
+                updatedData = {
+                    'status' : 'a'
+                }
+                room.update(**updatedData)
+                room = room.first()
+                for e in allRequestList:
+                    user = User.objects.filter(Q(kakao_auth_id=e.user.kakao_auth_id)).first()
+                    meetingInfo = {
+                        "room" : room,
+                        "user" : user,
+                        "type" : e.type,
+                        "user_role" : 'g' if e.user_role == 'invitee' else 'a'
+                    }
+                    Meeting.objects.create(**meetingInfo)
+
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except KeyError :
+            return Response({"detail" : "Invalid input.", "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
+
+class InviterParticipateRequestViewSet(mixins.CreateModelMixin, mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
     serializer_class = ParticipationRoomUserSerializer
 
     def get_queryset(self):
         try:
-            to_user_id, room_id, _type = self.request.data['to_user_id'], self.request.data['room_id'], self.request.data['type']
-            queryset = FriendsParticipation.objects.select_related('room', 'from_user').filter(Q(type=_type) & Q(from_user=self.request.user) & \
-                Q(to_user=to_user_id) & Q(room=room_id))
+            id = self.kwargs['pk']
+            queryset = FriendsParticipation.objects.select_related('room', 'user').filter(Q(id=id))
             return queryset
         except (MultiValueDictKeyError, KeyError) :
-            return FriendsParticipation.objects.select_related('room', 'from_user', 'to_user').filter(Q(from_user=self.request.user) | Q(to_user=self.request.user))
+            queryset = FriendsParticipation.objects.select_related('room', 'user').filter(user=self.request.user, type='p', user_role='inviter').exclude(room__status='c')
+            print(queryset.query)
+            return queryset
 
     def create(self, request, *args, **kwargs):
         participation_user_list = request.data.pop('participation_user_list')
@@ -91,8 +297,8 @@ class MeetingCreateRequestViewSet(mixins.CreateModelMixin, mixins.UpdateModelMix
             return Response({"detail" : "Duplicate users have been added.", "error" : "404"}, status=status.HTTP_400_BAD_REQUEST)
 
         request.data.update({
-            "from_user" : User.objects.filter(Q(kakao_auth_id=request.user)).first(),
-            "room" : Room.objects.filter(Q(id=request.data["room"])).first()
+            "room" : Room.objects.filter(Q(id=request.data["room"])).first(),
+            "type" : 'p'
         })
         
         instanceList = []
@@ -108,175 +314,25 @@ class MeetingCreateRequestViewSet(mixins.CreateModelMixin, mixins.UpdateModelMix
                 return Response({"detail" : "This user does not exist.", "error" : "400"}, status=status.HTTP_400_BAD_REQUEST)
             else:
                 instanceList.append(instance)
-        
+        instanceList.append(User.objects.filter(Q(kakao_auth_id=request.user)).first())
         for instance in instanceList:
             request.data.update({
-                'to_user' : instance
+                'user' : instance,
+                'is_accpeted' : 'w' if instance.kakao_auth_id != str(request.user) else 'a',
+                'user_role' : 'invitee' if instance.kakao_auth_id != str(request.user) else 'inviter'
             })
             FriendsParticipation.objects.create(**request.data)
 
         return Response({"result" : True}, status=status.HTTP_201_CREATED)
 
-    def update(self, request, *args, **kwargs):
-        room_id, to_user_id = kwargs["pk"].split(":")
-        if Room.objects.filter(Q(id=room_id)).first().status == 'c' :
-            return Response({"detail" : "The requested room has been cancelled.", "error" : 406}, status=status.HTTP_406_NOT_ACCEPTABLE)
-
-        if request.data["is_accepted"] not in ['a', 'r'] :
-            return Response({"detail" : "Invalid input. is_accepted can only be'a' or 'r'.", "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
-        
-        if request.data["is_accepted"] == None :
-            print(request.data)
-            return Response({"detail" : "is_accepted does not exist.", "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
-        
-        if len(request.data) > 1 :
-            return Response({"detail" : "Too many parameters.", "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
-
-        partial = kwargs.pop('partial', False)
-        instance = FriendsParticipation.objects.select_related('room', 'from_user', 'to_user').filter(Q(from_user_id=request.user) & Q(room=room_id) & Q(to_user_id=to_user_id)).first()
-        
-        serializer = FriendsParticipationSerializer(instance, data=request.data, partial=partial)
-        serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
-
-        if getattr(instance, '_prefetched_objects_cache', None):
-            # If 'prefetch_related' has been applied to a queryset, we need to
-            # forcibly invalidate the prefetch cache on the instance.
-            instance._prefetched_objects_cache = {}
-        room = room = Room.objects.filter(Q(id=room_id))
-        if request.data["is_accepted"] == 'r' :
-            updatedData = {
-                "status" : 'c'
-            }
-            room.update(**updatedData)
-            return Response(RoomSerializer(room.first()).data, status=status.HTTP_205_RESET_CONTENT)
-
-        allRequestList = FriendsParticipation.objects.filter(Q(room=room_id))
-        isAllAccept = True
-        for e in allRequestList:
-            isAllAccept &= (e.is_accepted == 'a')
-
-        if isAllAccept : 
-            updatedData = {
-                'status' : 'a'
-            }
-            room.update(**updatedData)
-            room = room.first()
-            for e in allRequestList:
-                user = User.objects.filter(Q(kakao_auth_id=e.to_user)).first()
-                meetingInfo = {
-                    "room" : room,
-                    "user" : user,
-                    "type" : e.type,
-                    "user_role" : 'g'
-                }
-                Meeting.objects.create(**meetingInfo)
-            user = User.objects.filter(Q(kakao_auth_id=e.from_user)).first()
-            meetingInfo = {
-                "room" : room,
-                "user" : user,
-                "type" : e.type,
-                "user_role" : 'a' if e.type == 'c' else 'g'
-            }
-            Meeting.objects.create(**meetingInfo)
-
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
     def destroy(self, request, *args, **kwargs):
-        room_id, to_user_id = kwargs["pk"].split(":")
-        instance = instance = FriendsParticipation.objects.select_related('room', 'from_user', 'to_user').filter(Q(from_user_id=request.user) & Q(room=room_id) & Q(to_user_id=to_user_id)).first()
+        room, invitee_user = kwargs["pk"].split(":")
+        instance = FriendsParticipation.objects.select_related('room', 'inviter_user', 'invitee_user').filter(Q(inviter_user=request.user) & Q(room=room) & Q(invitee_user=invitee_user)).first()
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
-        
 
+class InviterCreateRequestViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = ParticipationRoomUserSerializer
 
-# class ListMeetingRequestViewSet(viewsets.ModelViewSet):
-#     serializer_class = MeetingInfoSerializer
-
-#     def get_queryset(self):
-#         my_meeting_id = get_my_meeting_id(self.request.user)
-#         is_active = self.request.GET.get('is_active', True)  # active : 요청 한(true) / 요청 받은(false)
-#         queryset = []
-
-#         if is_active == 'True':
-#             requested_list = MeetingRequest.objects.filter(requestor_meeting_id=my_meeting_id)
-#         else:
-#             requested_list = MeetingRequest.objects.filter(author_meeting_id=my_meeting_id)
-
-#         for requested in requested_list:
-#             if is_active == 'True':
-#                 meeting = MeetingInfo.objects.get(Q(id=requested.author_meeting_id) & Q(status='activate'))
-#             else:
-#                 meeting = MeetingInfo.objects.get(Q(id=requested.requestor_meeting_id) & Q(status='activate'))
-#             if meeting is not None:
-#                 queryset.insert(0, meeting)
-
-#         set_am_i_requested_field(queryset, my_meeting_id)
-#         return queryset
-
-
-# class MeetingRequestViewSet(viewsets.ModelViewSet):
-#     serializer_class = MeetingRequestSerializer
-#     queryset = MeetingRequest.objects.all()
-
-#     def create(self, request, *args, **kwargs):
-#         author = request.data.get('author_meeting_id')
-#         requestor = get_my_meeting_id(request.user)
-#         request.data['requestor_meeting_id'] = requestor
-
-#         # check 409
-#         requested_meeting = MeetingRequest.objects.all()
-#         if requested_meeting.filter(Q(author_meeting_id=author) & Q(requestor_meeting_id=requestor)).exists():
-#             return Response(status=status.HTTP_409_CONFLICT)
-
-#         # check 404
-#         author_meeting = MeetingInfo.objects.filter(Q(status='activate') & Q(id=author))
-#         requestor_meeting = MeetingInfo.objects.filter(Q(status='activate') & Q(id=requestor))
-#         if not author_meeting.exists() or not requestor_meeting.exists():
-#             return Response(status=status.HTTP_404_NOT_FOUND)
-
-#         return super().create(request, *args, **kwargs)
-
-
-# class ListMeetingMatchedViewSet(viewsets.ReadOnlyModelViewSet):
-#     serializer_class = MeetingInfoSerializer
-
-#     def get_queryset(self):
-#         my_meeting_id = get_my_meeting_id(self.request.user)
-#         try:
-#             id_list = MeetingMatchedId.objects.get(
-#                 Q(author_meeting_id=my_meeting_id) | Q(requestor_meeting_id=my_meeting_id))
-#             queryset = MeetingInfo.objects.filter(Q(id=id_list.author_meeting_id) | Q(id=id_list.requestor_meeting_id))
-#         except MeetingMatchedId.DoesNotExist:
-#             queryset = []
-
-#         set_am_i_requested_field(queryset, my_meeting_id)
-#         return queryset
-
-
-# class MeetingMatchedViewSet(viewsets.ModelViewSet):
-#     serializer_class = MeetingMatchedSerializer
-#     queryset = MeetingMatched.objects.all()
-
-#     def create(self, request, *args, **kwargs):
-#         requestor_meeting_id = request.data.get('requestor_meeting_integer_id')
-#         author_meeting = MeetingInfo.objects.filter(Q(status='activate') & Q(author=request.user)).first()
-#         requestor_meeting = MeetingInfo.objects.filter(Q(status='activate') & Q(id=requestor_meeting_id)).first()
-
-#         # check 404
-#         if not author_meeting or not requestor_meeting:
-#             return Response(status=status.HTTP_404_NOT_FOUND)
-
-#         # check 404
-#         if not MeetingRequest.objects.filter(
-#                 Q(author_meeting_id=author_meeting.id) & Q(requestor_meeting_id=requestor_meeting_id)).exists():
-#             return Response(status=status.HTTP_403_FORBIDDEN)
-
-#         # check 409
-#         matched_meeting = MeetingMatched.objects.all()
-#         if matched_meeting.filter(Q(author_meeting=author_meeting) & Q(requestor_meeting=requestor_meeting)).exists():
-#             return Response(status=status.HTTP_409_CONFLICT)
-#         if matched_meeting.filter(Q(author_meeting=requestor_meeting) & Q(requestor_meeting=author_meeting)).exists():
-#             return Response(status=status.HTTP_409_CONFLICT)
-
-#         return super().create(request, *args, **kwargs)
+    def get_queryset(self):
+        return FriendsParticipation.objects.select_related('room', 'user').filter(user=self.request.user, type='c', user_role='inviter').exclude(room__status='c')
