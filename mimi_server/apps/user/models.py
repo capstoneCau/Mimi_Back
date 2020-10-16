@@ -109,18 +109,18 @@ class FriendsParticipation(models.Model) :
     
     
     room = models.ForeignKey("meeting.Room", on_delete=models.CASCADE, related_name="request_room_id")
-    from_user = models.ForeignKey(
+    inviter_user = models.ForeignKey(
         User, 
         on_delete=models.CASCADE,
-        related_name="request_from_user"
+        related_name="request_inviter_user"
         )
-    to_user = models.ForeignKey(
+    invitee_user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='request_to_uesr',
+        related_name='request_invitee_user',
     )
     type = models.CharField(max_length=1, choices=CHOICES_TYPE)
     is_accepted = models.CharField(default='w', max_length=1, choices=CHOICES_REQUEST)
     class Meta:
-        unique_together = (("room", "from_user", "to_user"),)
+        unique_together = (("room", "inviter_user", "invitee_user"),)
     
