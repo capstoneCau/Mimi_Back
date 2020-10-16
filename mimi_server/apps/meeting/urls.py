@@ -1,15 +1,12 @@
 from django.urls import path, include
 from rest_framework import routers
 
-from mimi_server.apps.meeting.models import Room, Meeting
-from mimi_server.apps.user.models import FriendsParticipation
-from mimi_server.apps.meeting.views import AllRoomViewSet, MeetingCreateRequestViewSet, \
-    MyRoomViewSet, MeetingCreateRequestViewSet
+from mimi_server.apps.meeting.views import RoomViewSet, OwnsRoomViewSet, RoomParticipatedUserViewSet
 
 router = routers.DefaultRouter()
-router.register(r'allRoomList', AllRoomViewSet, basename='allRoom')
-router.register('myRoomList', MyRoomViewSet, basename='myRoom')
-router.register('meetingCreateRequestList', MeetingCreateRequestViewSet, basename='meetingCreateRequest')
+router.register(r'roomList', RoomViewSet, basename='room')
+router.register(r'ownsRoomList', OwnsRoomViewSet, basename='ownsRoom')
+router.register(r'userinfo', RoomParticipatedUserViewSet, basename='userinfo')
 
 urlpatterns = [
     path('', include(router.urls)),
