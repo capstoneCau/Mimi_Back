@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from collections import OrderedDict
-from .models import Room, Meeting
-from ..user.models import User, FriendsParticipation
+from .models import Room, Meeting, FriendsParticipation
+from ..user.models import User
 from ..user.serializer import UserField
 
 class MeetingSerializer(serializers.ModelSerializer):
@@ -59,25 +59,39 @@ class RoomField(serializers.PrimaryKeyRelatedField):
 
         return OrderedDict([(item.id, self.display_value(item)) for item in queryset])
 
-class RoomMeetingSerializer(serializers.ModelSerializer) :
+class FriendsParticipationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FriendsParticipation
+        fields = ['id', 'room', 'user', 'type', 'is_accepted', 'user_role']
+
+class MeetingRoomSerializer(serializers.ModelSerializer) :
     # meetings = MeetingSerializer(many=True)
     room = RoomField(queryset=Room.objects.all())
     class Meta:
         model = Meeting
-        fields = ['id', 'user', 'room']
-        # fields = ('id', 'reg_time', 'upd_time', 'meeting_date', 'available_dates', 'user_limit', 'introduction', 'status', 'meeting')
-        # fields = '__all__'
-        # lookup_field = 'user'
+        fields = ['room']
 
-class FriendsParticipationSerializer(serializers.ModelSerializer):
+class MeetingUserSerializer(serializers.ModelSerializer):
+    user = UserField(queryset=User.objects.all())
     class Meta:
-        model = FriendsParticipation
-        fields = ['id', 'room', 'from_user', 'to_user', 'type', 'is_accepted']
+        model = Meeting
+        fields = ['user']
 
 class ParticipationRoomUserSerializer(serializers.ModelSerializer):
     room = RoomField(queryset=Room.objects.all())
-    from_user = UserField(queryset=User.objects.all())
-    to_user = UserField(queryset=User.objects.all())
+    user = UserField(queryset=User.objects.all())
     class Meta:
         model = FriendsParticipation
-        fields = ['id', 'type', 'is_accepted', 'room', 'from_user', 'to_user']
+        fields = ['id', 'type', 'is_accepted', 'room', 'user', 'user_role']
+
+class ParticipatiedUserSerializer(serializers.ModelSerializer):
+    user = UserField(queryset=User.objects.all())
+    class Meta:
+        model = FriendsParticipation
+        fields = ['user', 'user_role']
+
+class ParticipatiedRoomSerializer(serializers.ModelSerializer):
+    room = RoomField(queryset=Room.objects.all())
+    class Meta:
+        model = FriendsParticipation
+        fields = ['room']

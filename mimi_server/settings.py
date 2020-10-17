@@ -43,7 +43,7 @@ INSTALLED_APPS = [
     'mimi_server.apps.mail',
     'mimi_server.apps.etcInformation',
     'rest_framework',
-    'rest_framework.authtoken',
+    'rest_framework.authtoken', #TODO Only use at debug mode
     # CORS
     'corsheaders',
 ]

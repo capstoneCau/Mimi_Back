@@ -23,5 +23,6 @@ urlpatterns = [
     path(r'api/', include('mimi_server.apps.user.urls')),
     path('mail/', include('mimi_server.apps.mail.urls')),
     path('meeting/', include('mimi_server.apps.meeting.urls')),
+    path('request/', include('mimi_server.apps.meeting.request_urls')),
     path('etcInformation/', include('mimi_server.apps.etcInformation.urls'))
 ]
