@@ -321,9 +321,9 @@ class InviterParticipateRequestViewSet(mixins.CreateModelMixin, mixins.DestroyMo
                 'is_accpeted' : 'w' if instance.kakao_auth_id != str(request.user) else 'a',
                 'user_role' : 'invitee' if instance.kakao_auth_id != str(request.user) else 'inviter'
             })
-            FriendsParticipation.objects.create(**request.data)
+            instance = FriendsParticipation.objects.create(**request.data)
 
-        return Response({"result" : True}, status=status.HTTP_201_CREATED)
+        return Response(ParticipationRoomUserSerializer(instance).data, status=status.HTTP_201_CREATED)
 
     def destroy(self, request, *args, **kwargs):
         room, invitee_user = kwargs["pk"].split(":")
