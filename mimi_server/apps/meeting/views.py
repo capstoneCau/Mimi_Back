@@ -15,7 +15,7 @@ from .serializer import RoomSerializer, MeetingRoomSerializer, MeetingUserSerial
 
 class RoomViewSet(mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet):
     serializer_class = RoomSerializer
-    
+    permission_classes = [IsAuthenticated]
     def get_queryset(self):
         try:
             id = self.kwargs['pk']
@@ -64,7 +64,7 @@ class RoomViewSet(mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet):
 
 class OwnsRoomViewSet(viewsets.ReadOnlyModelViewSet) :
     serializer_class = MeetingRoomSerializer
-
+    permission_classes = [IsAuthenticated]
     def get_queryset(self):
         try:
             user = self.request.data['user']
@@ -77,7 +77,7 @@ class OwnsRoomViewSet(viewsets.ReadOnlyModelViewSet) :
 
 class RoomParticipatedUserViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = MeetingUserSerializer
-
+    permission_classes = [IsAuthenticated]
     def get_queryset(self):
         try:
             room = self.request.data['room']
@@ -89,7 +89,7 @@ class RoomParticipatedUserViewSet(viewsets.ReadOnlyModelViewSet):
 
 class RequestUserViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = ParticipatiedUserSerializer
-
+    permission_classes = [IsAuthenticated]
     def get_queryset(self):
         try:
             request_id = self.request.data['request']
@@ -102,7 +102,7 @@ class RequestUserViewSet(viewsets.ReadOnlyModelViewSet):
 
 class RequestRoomViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = ParticipatiedRoomSerializer
-
+    permission_classes = [IsAuthenticated]
     def get_queryset(self):
         try:
             id = self.kwargs['pk']
@@ -114,6 +114,7 @@ class RequestRoomViewSet(viewsets.ReadOnlyModelViewSet):
 
 class InviteeParcitipateRequestViewSet(mixins.UpdateModelMixin, viewsets.ReadOnlyModelViewSet) :
     serializer_class = ParticipationRoomUserSerializer
+    permission_classes = [IsAuthenticated]
     def get_queryset(self):
         try:
             id = self.kwargs['pk']
@@ -200,6 +201,7 @@ class InviteeParcitipateRequestViewSet(mixins.UpdateModelMixin, viewsets.ReadOnl
 
 class InviteeCreateRequestViewSet(mixins.UpdateModelMixin, viewsets.ReadOnlyModelViewSet) :
     serializer_class = ParticipationRoomUserSerializer
+    permission_classes = [IsAuthenticated]
     def get_queryset(self):
         try:
             id = self.kwargs['pk']
@@ -280,7 +282,7 @@ class InviteeCreateRequestViewSet(mixins.UpdateModelMixin, viewsets.ReadOnlyMode
 
 class InviterParticipateRequestViewSet(mixins.CreateModelMixin, mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
     serializer_class = ParticipationRoomUserSerializer
-
+    permission_classes = [IsAuthenticated]
     def get_queryset(self):
         try:
             id = self.kwargs['pk']
@@ -333,6 +335,6 @@ class InviterParticipateRequestViewSet(mixins.CreateModelMixin, mixins.DestroyMo
 
 class InviterCreateRequestViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = ParticipationRoomUserSerializer
-
+    permission_classes = [IsAuthenticated]
     def get_queryset(self):
         return FriendsParticipation.objects.select_related('room', 'user').filter(user=self.request.user, type='c', user_role='inviter').exclude(room__status='c')

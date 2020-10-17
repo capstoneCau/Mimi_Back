@@ -10,43 +10,43 @@ from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticate
 class AnimalViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Animal.objects.all()
     serializer_class = AnimalSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    # permission_classes = [IsAuthenticatedOrReadOnly]
 
 class SchoolViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = School.objects.all()
     serializer_class = SchoolSerializer
     lookup_field = 'name'
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    # permission_classes = [IsAuthenticatedOrReadOnly]
         
 class MbtiViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Mbti.objects.all()
     serializer_class = MbtiSerializer
     lookup_field = 'name'
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    # permission_classes = [IsAuthenticatedOrReadOnly]
 
 class StarViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Star.objects.all()
     serializer_class = StarSerializer
     lookup_field = 'name'
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    # permission_classes = [IsAuthenticatedOrReadOnly]
 
 class ChineseZodiacViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = ChineseZodiac.objects.all()
     serializer_class = ChineseZodiacSerializer
     lookup_field = 'name'
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    # permission_classes = [IsAuthenticatedOrReadOnly]
 
 class MbtiCompatibilityViewSet(viewsets.ReadOnlyModelViewSet) :
     queryset = MbtiCompatibility.objects.all()
     serializer_class = MbtiCompatibilitySerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    # permission_classes = [IsAuthenticatedOrReadOnly]
 
 class StarCompatibilityViewSet(viewsets.ReadOnlyModelViewSet) :
     queryset = StarCompatibility.objects.all()
     serializer_class = StarCompatibilitySerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    # permission_classes = [IsAuthenticatedOrReadOnly]
 
 class ZodiacCompatibilityViewSet(viewsets.ReadOnlyModelViewSet) :
     queryset = ZodiacCompatibility.objects.all()
     serializer_class = ZodiacCompatibilitySerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    # permission_classes = [IsAuthenticatedOrReadOnly]
