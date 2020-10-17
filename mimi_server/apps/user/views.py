@@ -6,6 +6,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework import status
 from rest_framework.views import APIView
 from mimi_server.apps.user.serializer import UserSerializer, CustomAuthTokenSerializer
+from mimi_server.apps.user.models import User
 
 from rest_framework import parsers, renderers
 # from rest_framework.authtoken.serializers import AuthTokenSerializer
@@ -69,7 +70,7 @@ class CustomAuthToken(APIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
         token, created = Token.objects.get_or_create(user=user)
-        return Response({'token': token.key})
+        return Response({'user': UserSerializer(User.objects.get(kakao_auth_id=user)).data, 'token': token.key})
 
 
 obtain_auth_token = CustomAuthToken.as_view()
