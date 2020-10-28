@@ -3,9 +3,11 @@ from .models import User, Friends
 from collections import OrderedDict
 from django.contrib.auth import authenticate
 from django.utils.translation import gettext_lazy as _
+from ..etcInformation.serializer import AnimalSerializer
 
 class UserSerializer(serializers.ModelSerializer):
     # profileImg = AnimalSerializer()
+    profileImg = AnimalSerializer()
     class Meta:
         model = User
         fields = ['kakao_auth_id', 'name', 'gender', 'birthday','email', 'school',
@@ -23,9 +25,10 @@ class UserSerializer(serializers.ModelSerializer):
         return user
 
 class FriendsSerializer(serializers.ModelSerializer):
+    to_user = UserSerializer()
     class Meta:
         model = Friends
-        fields = ['id', 'from_user', 'to_user', 'type']
+        fields = ['id', 'to_user', 'type']
 
 class UserField(serializers.PrimaryKeyRelatedField):
 
