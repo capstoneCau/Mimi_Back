@@ -3,14 +3,12 @@ from django.contrib.auth.models import (AbstractUser, BaseUserManager)
 # Create your models here.
 class UserManager(BaseUserManager):
 
-    def create_user(self, kakao_auth_id, name, gender, birthday, email, school, profileImg, latitude=None, longitude=None, mbti=None, star=None, chinese_zodiac=None):
+    def create_user(self, kakao_auth_id, name, gender, birthday, email, school, profileImg=None, mbti=None, star=None, chinese_zodiac=None):
         user = self.model(
             kakao_auth_id=kakao_auth_id,
             name=name,
             gender=gender,
             birthday=birthday,
-            latitude=latitude,
-            longitude=longitude,
             email=email,
             school=school,
             profileImg=profileImg,
@@ -21,8 +19,8 @@ class UserManager(BaseUserManager):
 
         return user
 
-    def create_superuser(self, kakao_auth_id, name, gender, birthday, email, school, profileImg, latitude, longitude, mbti, star, chinese_zodiac):
-        user = self.create_user(kakao_auth_id, name, gender, birthday, email, school, profileImg, latitude, longitude, mbti, star, chinese_zodiac)
+    def create_superuser(self, kakao_auth_id, name, gender, birthday, email, school, profileImg=None, mbti=None, star=None, chinese_zodiac=None ):
+        user = self.create_user(kakao_auth_id, name, gender, birthday, email, school, profileImg, mbti, star, chinese_zodiac)
         user.is_superuser = True
         user.is_staff = True
         user.save()
@@ -43,11 +41,10 @@ class User(AbstractUser):
     name = models.CharField(max_length=6, verbose_name="이름")
     gender = models.CharField(max_length=6, verbose_name="성별", choices=CHOICE_GENDER)
     birthday = models.DateField(verbose_name="생년월일")
-    latitude = models.FloatField(null=True)
-    longitude = models.FloatField(null=True)
     email = models.EmailField(unique=True, verbose_name="학교 이메일")
-    school = models.ForeignKey("etcInformation.School", on_delete=models.CASCADE, verbose_name="학교")
-    profileImg = models.ForeignKey("etcInformation.Animal", on_delete=models.CASCADE, verbose_name="프로필 사진")
+    school = models.CharField(max_length=40, verbose_name="학교")
+
+    profileImg = models.ForeignKey("etcInformation.Animal", null=True, on_delete=models.CASCADE, verbose_name="프로필 사진")
     mbti = models.ForeignKey("etcInformation.Mbti", null=True, on_delete=models.CASCADE, verbose_name="mbti 성향")
     star = models.ForeignKey("etcInformation.Star", null=True, on_delete=models.CASCADE, verbose_name="별자리")
     chinese_zodiac = models.ForeignKey("etcInformation.ChineseZodiac", null=True,  on_delete=models.CASCADE, verbose_name="별자리")
@@ -88,7 +85,7 @@ class Friends(models.Model):
         related_name='relations_by_to_user',
     )
     # 서로의 관계를 표현하기 위한 필드
-    type = models.CharField(max_length=1, choices=CHOICES_TYPE)
+    type = models.CharField(default='f', max_length=1, choices=CHOICES_TYPE)
 
 
     

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User
+from .models import User, Friends
 from collections import OrderedDict
 from django.contrib.auth import authenticate
 from django.utils.translation import gettext_lazy as _
@@ -9,7 +9,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['kakao_auth_id', 'name', 'gender', 'birthday','email', 'school',
-        'profileImg', 'latitude', 'longitude', 'mbti', 'star', 'chinese_zodiac']
+        'profileImg', 'mbti', 'star', 'chinese_zodiac']
         # fields = '__all__'
         lookup_field = 'kakao_auth_id'
         extra_kwargs = {
@@ -21,6 +21,11 @@ class UserSerializer(serializers.ModelSerializer):
         user.set_password("mimi")
         user.save()
         return user
+
+class FriendsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Friends
+        fields = ['id', 'from_user', 'to_user', 'type']
 
 class UserField(serializers.PrimaryKeyRelatedField):
 
@@ -39,9 +44,6 @@ class UserField(serializers.PrimaryKeyRelatedField):
             return {}
 
         return OrderedDict([(item.kakao_auth_id, self.display_value(item)) for item in queryset])
-
-
-
 
 class CustomAuthTokenSerializer(serializers.Serializer):
     kakao_auth_id = serializers.CharField(label=_("Kakao_auth_id"))
