@@ -1,12 +1,13 @@
 from django.contrib.auth import get_user_model
 from rest_framework.generics import CreateAPIView
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
-from rest_framework import status
+from rest_framework import viewsets, status, mixins
 from rest_framework.views import APIView
-from mimi_server.apps.user.serializer import UserSerializer, CustomAuthTokenSerializer
-from mimi_server.apps.user.models import User
+from mimi_server.apps.user.serializer import UserSerializer, CustomAuthTokenSerializer, FriendsSerializer
+from mimi_server.apps.user.models import User, Friends
+from django.db.models import Q
 
 from rest_framework import parsers, renderers
 # from rest_framework.authtoken.serializers import AuthTokenSerializer
@@ -74,3 +75,54 @@ class CustomAuthToken(APIView):
 
 
 obtain_auth_token = CustomAuthToken.as_view()
+
+class FriendsViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
+    serializer_class = FriendsSerializer
+    permission_classes = [IsAuthenticated]
+    def get_queryset(self) :
+        queryset = Friends.objects.filter(Q(from_user=self.request.user) & Q(type='f'))
+        return queryset
+    
+    def create(self, request, *args, **kwargs):
+        request.data.update({
+            'from_user' : request.user,
+            'to_user' : User.objects.get(kakao_auth_id=request.data['to_user'])
+        })
+
+        if request.data['to_user'].kakao_auth_id == request.data['from_user'].kakao_auth_id :
+            return Response({"detaile" : "The person to add as a friend is incorrect.", "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if len(Friends.objects.filter(Q(from_user=request.data['from_user'].kakao_auth_id) & Q(to_user=request.data['to_user'].kakao_auth_id))) > 0 :
+            return Response({"detaile" : "Already exists.", "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
+
+        friend = Friends.objects.create(**request.data)
+        print(FriendsSerializer(friend).data)
+        return Response(FriendsSerializer(friend).data, status=status.HTTP_201_CREATED)
+    
+    def update(self, request, *args, **kwargs):
+        try:
+            if request.data['type'] == None:
+                return Response({"detail" : "You must send type data.", "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
+            if len(request.data) >= 2 :
+                return Response({"detail" : "You must send only type data.", "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
+            
+            friends_id = kwargs['pk']
+            partial = kwargs.pop('partial', False)
+            instance = Friends.objects.filter(Q(id=friends_id)).first()
+
+            if instance.type == request.data['type'] :
+                return Response({"detail" : "It is the same type.", "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
+
+            serializer = self.get_serializer(instance, data=request.data, partial=partial)
+            serializer.is_valid(raise_exception=True)
+            self.perform_update(serializer)
+
+            if getattr(instance, '_prefetched_objects_cache', None):
+                # If 'prefetch_related' has been applied to a queryset, we need to
+                # forcibly invalidate the prefetch cache on the instance.
+                instance._prefetched_objects_cache = {}
+
+            return Response(serializer.data)
+
+        except KeyError:
+            return Response({"detail" : "The url is invalid. Please enter the id in the url.", "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
