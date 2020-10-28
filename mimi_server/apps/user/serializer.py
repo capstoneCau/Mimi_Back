@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User
+from .models import User, Friends
 from collections import OrderedDict
 from django.contrib.auth import authenticate
 from django.utils.translation import gettext_lazy as _
@@ -22,6 +22,11 @@ class UserSerializer(serializers.ModelSerializer):
         user.save()
         return user
 
+class FriendsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Friends
+        fields = ['id', 'from_user', 'to_user', 'type']
+
 class UserField(serializers.PrimaryKeyRelatedField):
 
     def to_representation(self, value):
@@ -39,9 +44,6 @@ class UserField(serializers.PrimaryKeyRelatedField):
             return {}
 
         return OrderedDict([(item.kakao_auth_id, self.display_value(item)) for item in queryset])
-
-
-
 
 class CustomAuthTokenSerializer(serializers.Serializer):
     kakao_auth_id = serializers.CharField(label=_("Kakao_auth_id"))
