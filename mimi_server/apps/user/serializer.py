@@ -9,7 +9,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['kakao_auth_id', 'name', 'gender', 'birthday','email', 'school',
-        'profileImg', 'latitude', 'longitude', 'mbti', 'star', 'chinese_zodiac']
+        'profileImg', 'mbti', 'star', 'chinese_zodiac']
         # fields = '__all__'
         lookup_field = 'kakao_auth_id'
         extra_kwargs = {
