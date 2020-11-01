@@ -1,9 +1,15 @@
 from django.db import models
+from django.db.models import Q
 from django.contrib.auth.models import (AbstractUser, BaseUserManager)
+from .selectEtcInformation import selectChineseZodiac, selectStar
+from ..etcInformation.models import Star, ChineseZodiac
 # Create your models here.
 class UserManager(BaseUserManager):
 
     def create_user(self, kakao_auth_id, name, gender, birthday, email, school, profileImg=None, mbti=None, star=None, chinese_zodiac=None):
+        chinese_zodiac = ChineseZodiac.objects.filter(Q(name=selectChineseZodiac(str(birthday).split("-")[0]))).first() if chinese_zodiac == None else chinese_zodiac
+        star = Star.objects.filter(Q(name=selectStar(str(birthday).split("-")[1], str(birthday).split("-")[2]))).first() if star == None else star
+
         user = self.model(
             kakao_auth_id=kakao_auth_id,
             name=name,
