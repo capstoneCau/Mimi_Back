@@ -1,5 +1,4 @@
 from django.db import models
-from ..user.models import Friends
 # Create your models here.
 class Animal(models.Model):
     imgData = models.ImageField()

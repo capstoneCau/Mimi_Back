@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Animal, School, Mbti, Friends, Star, ChineseZodiac, \
+from .models import Animal, School, Mbti, Star, ChineseZodiac, \
     MbtiCompatibility, StarCompatibility, ZodiacCompatibility
 
 class AnimalSerializer(serializers.ModelSerializer):
