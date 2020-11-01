@@ -2,7 +2,7 @@ from rest_framework import serializers
 from collections import OrderedDict
 from .models import Room, Meeting, FriendsParticipation
 from ..user.models import User
-from ..user.serializer import UserViewSerializer
+from ..user.serializer import UserViewSerializer, UserSerializer
 from ..user.serializer import UserField
 
 class MeetingSerializer(serializers.ModelSerializer):
@@ -78,6 +78,13 @@ class MeetingUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = Meeting
         fields = ['user']
+
+class MeetingRoomUserSerializer(serializers.ModelSerializer):
+    user = UserViewSerializer()
+    room = RoomSerializer()
+    class Meta:
+        model = Meeting
+        fields = ['user', 'room']
 
 class ParticipationRoomUserSerializer(serializers.ModelSerializer):
     room = RoomField(queryset=Room.objects.all())

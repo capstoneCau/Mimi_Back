@@ -11,10 +11,10 @@ from django.utils.datastructures import MultiValueDictKeyError
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly
 
 from .serializer import RoomSerializer, MeetingRoomSerializer, MeetingUserSerializer, ParticipationRoomUserSerializer, \
-    ParticipatiedUserSerializer, ParticipatiedRoomSerializer
+    ParticipatiedUserSerializer, ParticipatiedRoomSerializer, MeetingRoomUserSerializer
 
 class RoomViewSet(mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet):
-    serializer_class = RoomSerializer
+    serializer_class = MeetingRoomUserSerializer
     permission_classes = [IsAuthenticated]
     def get_queryset(self):
         try:
@@ -22,9 +22,9 @@ class RoomViewSet(mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet):
             queryset = Room.objects.filter(Q(id=id)) #test
             return queryset
         except KeyError:
-            queryset = Room.objects.exclude(meeting=self.request.user).filter(status='a').all() #test
+            queryset = Meeting.objects.select_related('room', 'user').exclude(Q(user__gender=self.request.user.gender)).filter(room__status='a').all() #test
             # queryset = Room.objects.all() #test
-            # print(queryset.query)
+            print(queryset.query)
             return queryset
 
     def create(self, request, *args, **kwargs):
