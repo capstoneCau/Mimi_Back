@@ -79,12 +79,12 @@ class MeetingUserSerializer(serializers.ModelSerializer):
         model = Meeting
         fields = ['user']
 
-class MeetingRoomUserSerializer(serializers.ModelSerializer):
-    user = UserViewSerializer()
-    room = RoomSerializer()
-    class Meta:
-        model = Meeting
-        fields = ['user', 'room']
+# class MeetingRoomUserSerializer(serializers.ModelSerializer):
+#     user = UserViewSerializer()
+#     room = RoomSerializer()
+#     class Meta:
+#         model = Meeting
+#         fields = ['user', 'room']
 
 class ParticipationRoomUserSerializer(serializers.ModelSerializer):
     room = RoomField(queryset=Room.objects.all())
