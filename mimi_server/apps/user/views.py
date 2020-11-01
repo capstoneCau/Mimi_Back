@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from rest_framework import viewsets, status, mixins
 from rest_framework.views import APIView
-from mimi_server.apps.user.serializer import UserSerializer, CustomAuthTokenSerializer, FriendsSerializer
+from mimi_server.apps.user.serializer import UserSerializer, UserViewSerializer, CustomAuthTokenSerializer, FriendsSerializer
 from mimi_server.apps.user.models import User, Friends
 from django.db.models import Q
 
@@ -71,7 +71,7 @@ class CustomAuthToken(APIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
         token, created = Token.objects.get_or_create(user=user)
-        return Response({'user': UserSerializer(User.objects.get(kakao_auth_id=user)).data, 'token': token.key})
+        return Response({'user': UserViewSerializer(User.objects.get(kakao_auth_id=user)).data, 'token': token.key})
 
 
 obtain_auth_token = CustomAuthToken.as_view()

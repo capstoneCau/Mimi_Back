@@ -7,7 +7,6 @@ from ..etcInformation.serializer import AnimalSerializer
 
 class UserSerializer(serializers.ModelSerializer):
     # profileImg = AnimalSerializer()
-    profileImg = AnimalSerializer()
     class Meta:
         model = User
         fields = ['kakao_auth_id', 'name', 'gender', 'birthday','email', 'school',
@@ -23,6 +22,17 @@ class UserSerializer(serializers.ModelSerializer):
         user.set_password("mimi")
         user.save()
         return user
+
+class UserViewSerializer(serializers.ModelSerializer):
+    profileImg = AnimalSerializer()
+    class Meta:
+        model = User
+        fields = ['kakao_auth_id', 'name', 'gender', 'birthday','email', 'school',
+        'profileImg', 'mbti', 'star', 'chinese_zodiac']
+        lookup_field = 'kakao_auth_id'
+        extra_kwargs = {
+            'url': {'lookup_field': 'kakao_auth_id'}
+        }
 
 class FriendsSerializer(serializers.ModelSerializer):
     to_user = UserSerializer()

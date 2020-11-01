@@ -2,7 +2,7 @@ from rest_framework import serializers
 from collections import OrderedDict
 from .models import Room, Meeting, FriendsParticipation
 from ..user.models import User
-from ..user.serializer import UserSerializer
+from ..user.serializer import UserViewSerializer
 from ..user.serializer import UserField
 
 class MeetingSerializer(serializers.ModelSerializer):
@@ -23,7 +23,7 @@ class RoomSerializer(serializers.ModelSerializer):
     # requirements of the client leak into our API.
     reg_time = serializers.SerializerMethodField(method_name='get_reg_time')
     upd_time = serializers.SerializerMethodField(method_name='get_upd_time') 
-    meeting = UserSerializer(many=True)
+    meeting = UserViewSerializer(many=True)
     # meeting_id = MeetingSerializer(many=True)
     class Meta:
         model = Room
