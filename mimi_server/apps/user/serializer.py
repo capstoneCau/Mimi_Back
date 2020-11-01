@@ -9,7 +9,7 @@ class UserSerializer(serializers.ModelSerializer):
     # profileImg = AnimalSerializer()
     class Meta:
         model = User
-        fields = ['kakao_auth_id', 'name', 'gender', 'birthday','email', 'school',
+        fields = ['kakao_auth_id', 'name', 'gender', 'birthday','email', 'school', 'fcmToken',
         'profileImg', 'mbti', 'star', 'chinese_zodiac']
         # fields = '__all__'
         lookup_field = 'kakao_auth_id'
@@ -27,7 +27,7 @@ class UserViewSerializer(serializers.ModelSerializer):
     profileImg = AnimalSerializer()
     class Meta:
         model = User
-        fields = ['kakao_auth_id', 'name', 'gender', 'birthday','email', 'school',
+        fields = ['kakao_auth_id', 'name', 'gender', 'birthday','email', 'school', 'fcmToken',
         'profileImg', 'mbti', 'star', 'chinese_zodiac']
         lookup_field = 'kakao_auth_id'
         extra_kwargs = {

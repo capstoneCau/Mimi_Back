@@ -6,7 +6,7 @@ from ..etcInformation.models import Star, ChineseZodiac
 # Create your models here.
 class UserManager(BaseUserManager):
 
-    def create_user(self, kakao_auth_id, name, gender, birthday, email, school, profileImg=None, mbti=None, star=None, chinese_zodiac=None):
+    def create_user(self, kakao_auth_id, name, gender, birthday, email, school, fcmToken=None, profileImg=None, mbti=None, star=None, chinese_zodiac=None):
         chinese_zodiac = ChineseZodiac.objects.filter(Q(name=selectChineseZodiac(str(birthday).split("-")[0]))).first() if chinese_zodiac == None else chinese_zodiac
         star = Star.objects.filter(Q(name=selectStar(str(birthday).split("-")[1], str(birthday).split("-")[2]))).first() if star == None else star
 
@@ -17,6 +17,7 @@ class UserManager(BaseUserManager):
             birthday=birthday,
             email=email,
             school=school,
+            fcmToken=fcmToken,
             profileImg=profileImg,
             mbti=mbti,
             star=star,
@@ -25,8 +26,8 @@ class UserManager(BaseUserManager):
 
         return user
 
-    def create_superuser(self, kakao_auth_id, name, gender, birthday, email, school, profileImg=None, mbti=None, star=None, chinese_zodiac=None ):
-        user = self.create_user(kakao_auth_id, name, gender, birthday, email, school, profileImg, mbti, star, chinese_zodiac)
+    def create_superuser(self, kakao_auth_id, name, gender, birthday, email, school, fcmToken=None, profileImg=None, mbti=None, star=None, chinese_zodiac=None ):
+        user = self.create_user(kakao_auth_id, name, gender, birthday, email, school, fcmToken, profileImg, mbti, star, chinese_zodiac)
         user.is_superuser = True
         user.is_staff = True
         user.save()
@@ -49,6 +50,7 @@ class User(AbstractUser):
     birthday = models.DateField(verbose_name="생년월일")
     email = models.EmailField(unique=True, verbose_name="학교 이메일")
     school = models.CharField(max_length=40, verbose_name="학교")
+    fcmToken = models.TextField(null=True, verbose_name="fcmToken")
 
     profileImg = models.ForeignKey("etcInformation.Animal", null=True, on_delete=models.CASCADE, verbose_name="프로필 사진")
     mbti = models.ForeignKey("etcInformation.Mbti", null=True, on_delete=models.CASCADE, verbose_name="mbti 성향")
@@ -92,6 +94,3 @@ class Friends(models.Model):
     )
     # 서로의 관계를 표현하기 위한 필드
     type = models.CharField(default='f', max_length=1, choices=CHOICES_TYPE)
-
-
-    

@@ -41,8 +41,23 @@ class LogoutUserAPIView(APIView):
         request.user.auth_token.delete()
         return Response(status=status.HTTP_200_OK)
 
+class UserFcmTokenView(mixins.UpdateModelMixin, viewsets.ReadOnlyModelViewSet):
+    serializer_class = UserSerializer
+    permission_classes = [AllowAny]
+    queryset = User.objects.all()
+    def update(self, request, *args, **kwargs):
+        if (request.data['fcmToken'] == None) :
+            return Response({"detail" : "There is no fcm token.", "error": 400}, statu=status.HTTP_400_BAD_REQUEST)
+        
+        if (len(request.data) >= 2):
+            return Response({"detail" : "Only the fcm token can be modified.", "error": 400}, statu=status.HTTP_400_BAD_REQUEST)
 
+        if (User.objects.filter(Q(kakao_auth_id=request.user)).first() == None) :
+            return Response({"detail" : "The user does not exist."})
+        
+        return super.update(request, args, kwargs)
 
+            
 class CustomAuthToken(APIView):
     throttle_classes = ()
     permission_classes = ()
