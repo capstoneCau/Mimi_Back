@@ -320,7 +320,7 @@ class InviterParticipateRequestViewSet(mixins.CreateModelMixin, mixins.DestroyMo
         for instance in instanceList:
             request.data.update({
                 'user' : instance,
-                'is_accpeted' : 'w' if instance.kakao_auth_id != str(request.user) else 'a',
+                'is_accepted' : 'w' if instance.kakao_auth_id != str(request.user) else 'a',
                 'user_role' : 'invitee' if instance.kakao_auth_id != str(request.user) else 'inviter'
             })
             instance = FriendsParticipation.objects.create(**request.data)
