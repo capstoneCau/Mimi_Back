@@ -35,6 +35,7 @@ class Room(models.Model):
         (STATUS_ACTIVE, 'active'),
         (STATUS_CANCELED, 'canceled'),
     )
+
     reg_time = models.DateTimeField(auto_now_add=True, )
     upd_time = models.DateTimeField(auto_now=True)
     available_dates = ArrayField(models.DateField())
@@ -101,6 +102,7 @@ class FriendsParticipation(models.Model) :
     type = models.CharField(max_length=1, choices=CHOICES_TYPE)
     is_accepted = models.CharField(default='w', max_length=1, choices=CHOICES_REQUEST)
     user_role = models.CharField(max_length=7, choices=CHOICES_ROLE)
+    party_number = models.CharField(max_length=30)
     class Meta:
         unique_together = (("room", "user"))
     
