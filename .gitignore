@@ -3,5 +3,8 @@ __pycache__
 
 tutorials
 
+# ML Model
+*.h5
+
 # secret file
 secret.py
