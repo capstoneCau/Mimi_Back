@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 from mimi_server.apps.user.serializer import UserSerializer, UserViewSerializer, CustomAuthTokenSerializer, FriendsSerializer
 from mimi_server.apps.user.models import User, Friends
 from django.db.models import Q
-
+from rest_framework.exceptions import ValidationError
 from rest_framework import parsers, renderers
 # from rest_framework.authtoken.serializers import AuthTokenSerializer
 from rest_framework.compat import coreapi, coreschema
@@ -16,7 +16,6 @@ from rest_framework.schemas import ManualSchema
 
 class CreateUserAPIView(CreateAPIView):
     serializer_class = UserSerializer
-    permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -43,7 +42,6 @@ class LogoutUserAPIView(APIView):
 
 class UserFcmTokenView(mixins.UpdateModelMixin, viewsets.ReadOnlyModelViewSet):
     serializer_class = UserSerializer
-    permission_classes = [AllowAny]
     queryset = User.objects.all()
     def update(self, request, *args, **kwargs):
         if (request.data['fcmToken'] == None) :
@@ -56,6 +54,18 @@ class UserFcmTokenView(mixins.UpdateModelMixin, viewsets.ReadOnlyModelViewSet):
             return Response({"detail" : "The user does not exist."})
         
         return super.update(request, args, kwargs)
+
+class SearchUserView(viewsets.ReadOnlyModelViewSet):
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        try :
+            email = self.request.data['email']
+            queryset = User.objects.filter(Q(email=email))
+            return queryset
+        except KeyError:
+            raise ValidationError("email 데이터를 넣어주세요.")
 
             
 class CustomAuthToken(APIView):

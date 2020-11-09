@@ -7,9 +7,9 @@ from ..etcInformation.models import Star, ChineseZodiac
 class UserManager(BaseUserManager):
 
     def create_user(self, kakao_auth_id, name, gender, birthday, email, school, fcmToken=None, profileImg=None, mbti=None, star=None, chinese_zodiac=None):
-        chinese_zodiac = ChineseZodiac.objects.filter(Q(name=selectChineseZodiac(str(birthday).split("-")[0]))).first() if chinese_zodiac == None else chinese_zodiac
-        star = Star.objects.filter(Q(name=selectStar(str(birthday).split("-")[1], str(birthday).split("-")[2]))).first() if star == None else star
-
+        chinese_zodiac = selectChineseZodiac(str(birthday).split("-")[0])
+        star = selectStar(str(birthday).split("-")[1], str(birthday).split("-")[2])
+        
         user = self.model(
             kakao_auth_id=kakao_auth_id,
             name=name,
@@ -55,7 +55,8 @@ class User(AbstractUser):
     profileImg = models.ForeignKey("etcInformation.Animal", null=True, on_delete=models.CASCADE, verbose_name="프로필 사진")
     mbti = models.ForeignKey("etcInformation.Mbti", null=True, on_delete=models.CASCADE, verbose_name="mbti 성향")
     star = models.ForeignKey("etcInformation.Star", null=True, on_delete=models.CASCADE, verbose_name="별자리")
-    chinese_zodiac = models.ForeignKey("etcInformation.ChineseZodiac", null=True,  on_delete=models.CASCADE, verbose_name="별자리")
+    chinese_zodiac = models.ForeignKey("etcInformation.ChineseZodiac", null=True,  on_delete=models.CASCADE, verbose_name="띠")
+
 
     friends = models.ManyToManyField('self', symmetrical=False, through='Friends', related_name='+')
     
