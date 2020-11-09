@@ -10,6 +10,7 @@ from rest_framework.decorators import api_view
 from django.utils.datastructures import MultiValueDictKeyError
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly
 from rest_framework.exceptions import ValidationError
+from django.db.models import Count
 
 from .serializer import RoomSerializer, MeetingRoomSerializer, MeetingUserSerializer, ParticipationRoomUserSerializer, \
     ParticipatiedUserSerializer, ParticipatiedRoomSerializer, FriendsParticipationSerializer
@@ -58,7 +59,7 @@ class RoomViewSet(mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet):
             FriendsParticipation.objects.create(**createdData)
             inviteeFcmList.append(invitee.fcmToken)
         
-        send(inviteeFcmList, "미팅 생성 요청이 왔습니다.", inviter.name + "님께서 미팅 생성 요청을 보냈습니다.")
+        # send(inviteeFcmList, "미팅 생성 요청이 왔습니다.", inviter.name + "님께서 미팅 생성 요청을 보냈습니다.")
 
         createdData = {
                 "room" : createdRoom,
@@ -120,11 +121,18 @@ class RequestCheckingView(viewsets.ReadOnlyModelViewSet):
         return FriendsParticipation.objects.filter(Q(room=req_instance.room) & Q(party_number=req_instance.party_number)).exclude(Q(user=self.request.user))
 
 class SelectedRequestMatchingView(viewsets.ReadOnlyModelViewSet, mixins.UpdateModelMixin):
-    serializer_class = ParticipatiedUserSerializer
+    serializer_class = FriendsParticipationSerializer
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        raise ValidationError(detail="GET 요청은 할 수 없습니다.")
+        request_id = self.request.data['request']
+        _request = FriendsParticipation.objects.get(Q(id=request_id))
+        queryset = FriendsParticipation.objects.filter(Q(room=_request.room)).exclude(Q(type='c')).exclude(Q(is_accepted='w')).values('party_number').annotate(request_count=Count('party_number')).filter(request_count__exact=_request.room.user_limit).all()
+        party_number = []
+        for e in queryset:
+            party_number.append(e['party_number'])
+        queryset = FriendsParticipation.objects.filter(party_number__in=party_number)
+        return queryset
 
     def update(self, request, *args, **kwargs):
         try:
@@ -147,20 +155,21 @@ class SelectedRequestMatchingView(viewsets.ReadOnlyModelViewSet, mixins.UpdateMo
     
         rejectedUserFcmList = []
         matchedUserFcmList = []
-        otherRequest = FriendsParticipation.objects.filter(Q(room=room)).exclude(Q(party_number=party_number)).all()
+        d = {
+            "is_accepted" : "r"
+        }
+        otherRequest = FriendsParticipation.objects.filter(Q(room=room)).exclude(Q(party_number=party_number)).exclude(Q(type='c'))
+        otherRequest.update(**d)
         for e in otherRequest:
-            d = {
-                "is_accepted" : "r"
-            }
-            e.update(**d)
             rejectedUserFcmList.append(e.user.fcmToken)
         if len(rejectedUserFcmList) != 0:
-            send(rejectedUserFcmList, "요청한 미팅이 거절되었습니다.", "요청한 미팅이 거절되었습니다.")
+            # send(rejectedUserFcmList, "요청한 미팅이 거절되었습니다.", "요청한 미팅이 거절되었습니다.")
+            pass
         
         updatedData = {
             'status' : 'm'
         }
-        room.update(**updatedData)
+        Room.objects.filter(Q(id=room.id)).update(**updatedData)
         for e in selectedRequest:
             # user = User.objects.filter(Q(kakao_auth_id=e.user.kakao_auth_id)).first()
             user = User.objects.get(Q(kakao_auth_id=e.user.kakao_auth_id))
@@ -172,7 +181,7 @@ class SelectedRequestMatchingView(viewsets.ReadOnlyModelViewSet, mixins.UpdateMo
             }
             Meeting.objects.create(**meetingInfo)
             matchedUserFcmList.append(e.user.fcmToken)
-        send(matchedUserFcmList, "요청한 미팅이 매칭되었습니다.", "요청한 미팅이 매칭되었습니다.")
+        # send(matchedUserFcmList, "요청한 미팅이 매칭되었습니다.", "요청한 미팅이 매칭되었습니다.")
 
         return Response(RoomSerializer(room).data, status=status.HTTP_200_OK)
 
@@ -269,7 +278,7 @@ class InviteeParcitipateRequestViewSet(mixins.UpdateModelMixin, viewsets.ReadOnl
                 e.update(**updatedData)
                 fcmList.append(e.user.fcmToken)
             fcmList.remove(instance.user.fcmToken)
-            send(fcmList, "참여 요청이 거절되었습니다.", instance.user.name + "님께서 참여 요청을 거절하였습니다.")
+            # send(fcmList, "참여 요청이 거절되었습니다.", instance.user.name + "님께서 참여 요청을 거절하였습니다.")
             
             return Response(RoomSerializer(room.first()).data, status=status.HTTP_205_RESET_CONTENT)
 
@@ -282,7 +291,7 @@ class InviteeParcitipateRequestViewSet(mixins.UpdateModelMixin, viewsets.ReadOnl
 
         if isAllAccept :
             fcmList.remove(instance.user.fcmToken)
-            send(fcmList, "참여 요청이 모두 수락되었습니다.", "참여 요청이 모두 수락되었습니다.\n방 생성자가 수락하게 되면 최종적으로 미팅이 매칭됩니다.")
+            # send(fcmList, "참여 요청이 모두 수락되었습니다.", "참여 요청이 모두 수락되었습니다.\n방 생성자가 수락하게 되면 최종적으로 미팅이 매칭됩니다.")
             
 
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -336,8 +345,8 @@ class InviteeCreateRequestViewSet(mixins.UpdateModelMixin, viewsets.ReadOnlyMode
                 # forcibly invalidate the prefetch cache on the instance.
                 instance._prefetched_objects_cache = {}
             
-            # room = Room.objects.filter(Q(id=instance.room.id))
-            room = Room.objects.get(Q(id=instance.room.id))
+            room = Room.objects.filter(Q(id=instance.room.id))
+            # room = Room.objects.get(Q(id=instance.room.id))
             if request.data["is_accepted"] == 'r' :
                 updatedData = {
                     "status" : 'c'
@@ -388,11 +397,18 @@ class InviterParticipateRequestViewSet(mixins.CreateModelMixin, mixins.DestroyMo
         participation_user_list = request.data.pop('participation_user_list')
         if len(set(participation_user_list)) != len(participation_user_list) :
             return Response({"detail" : "Duplicate users have been added.", "error" : "404"}, status=status.HTTP_400_BAD_REQUEST)
-
+        try:
+            room = Room.objects.get(Q(id=request.data["room"]))
+        except Room.DoesNotExist:
+            return Response({"detail" : 'Room ID does not exist.', "error" : 404}, status=status.HTTP_404_NOT_FOUND)
+        
         instanceList = []
-        if len(participation_user_list) > request.data["room"].user_limit:
+        if len(participation_user_list)+1 > room.user_limit:
             return Response({"detail": "You have exceeded the room limit.", "error" : "400"}, status=status.HTTP_400_BAD_REQUEST)
 
+        if len(participation_user_list)+1 < room.user_limit:
+            return Response({"detail": "There are fewer people than the room limit.", "error" : "400"}, status=status.HTTP_400_BAD_REQUEST)
+        
         for user_id in participation_user_list :
             if request.user == user_id:
                 return Response({"detail":"The invited user and the invited user are the same.",
