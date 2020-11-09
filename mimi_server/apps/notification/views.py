@@ -17,13 +17,10 @@ def sendNotification(request):
     if request.method == 'POST':
         fcmList = []
         for user in request.data['users']:
-            fcmList.append(User.objects.filter(Q(kakao_auth_id=user)).first().fcmToken)
+            fcmList.append(User.objects.get(Q(kakao_auth_id=user)).fcmToken)
             
-        send(fcmList, request.data['title'], request.data['body'])
+        res = send(fcmList, request.data['title'], request.data['body'])
         return Response(res.json(), status=status.HTTP_200_OK)
-        
-        
-    return render(request, 'mail/index.html', {'form':sub})
     
 
 def send(fcmList, title, body):
@@ -47,3 +44,4 @@ def send(fcmList, title, body):
         }
     }
     res = requests.post('https://fcm.googleapis.com/fcm/send', headers=headers, data=json.dumps(data))
+    return res
