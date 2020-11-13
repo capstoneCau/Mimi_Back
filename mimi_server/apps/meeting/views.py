@@ -201,7 +201,7 @@ class RequestUserViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
     def get_queryset(self):
         try:
-            request_id = self.request.data['request']
+            request_id = self.kwargs['pk']
             # request = FriendsParticipation.objects.filter(Q(id=request_id)).first()
             request = FriendsParticipation.objects.get(Q(id=request_id))
             room_id = request.room.id
@@ -209,7 +209,7 @@ class RequestUserViewSet(viewsets.ReadOnlyModelViewSet):
             queryset = FriendsParticipation.objects.select_related('user').filter(Q(room=room_id) & ~Q(user=self.request.user) & Q(party_number=party_number))
             return queryset
         except KeyError :
-            return None
+            raise ValidationError(detail="Put request Id")
 
 class RequestRoomViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = ParticipatiedRoomSerializer
