@@ -205,7 +205,8 @@ class RequestUserViewSet(viewsets.ReadOnlyModelViewSet):
             # request = FriendsParticipation.objects.filter(Q(id=request_id)).first()
             request = FriendsParticipation.objects.get(Q(id=request_id))
             room_id = request.room.id
-            queryset = FriendsParticipation.objects.select_related('user').filter(Q(room=room_id) & ~Q(user=self.request.user))
+            party_number = request.party_number
+            queryset = FriendsParticipation.objects.select_related('user').filter(Q(room=room_id) & ~Q(user=self.request.user) & Q(party_number=party_number))
             return queryset
         except KeyError :
             return None
