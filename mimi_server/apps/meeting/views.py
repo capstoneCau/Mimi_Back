@@ -21,8 +21,8 @@ class RoomViewSet(mixins.CreateModelMixin, mixins.DestroyModelMixin, viewsets.Re
     permission_classes = [IsAuthenticated]
     def get_queryset(self):
         try:
-            id = self.kwargs['pk']
-            queryset = Room.objects.filter(Q(id=id)) #test
+            room_id = self.request.GET['room']
+            queryset = Room.objects.filter(Q(id=room_id)) #test
             return queryset
         except KeyError:
             queryset = Room.objects.exclude(Q(meeting__gender=self.request.user.gender)).filter(Q(status='a')).all()
@@ -88,36 +88,31 @@ class OwnsRoomViewSet(viewsets.ReadOnlyModelViewSet) :
     serializer_class = MeetingRoomSerializer
     permission_classes = [IsAuthenticated]
     def get_queryset(self):
-        try:
-            user = self.request.data['user']
-            return Meeting.objects.select_related('room').filter(Q(user=user))
-        except KeyError:
-            queryset = Meeting.objects.select_related('room').filter(Q(user=self.request.user))
-            return queryset
+        queryset = Meeting.objects.select_related('room').filter(Q(user=self.request.user))
+        return queryset
             
-
 class RoomParticipatedUserViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = MeetingUserSerializer
     permission_classes = [IsAuthenticated]
     def get_queryset(self):
         try:
-            room = self.request.data['room']
-            queryset = Meeting.objects.select_related('user').filter(Q(room=room))
+            room = self.request.GET['room']
+            queryset = Meeting.objects.select_related('user').filter(Q(room=room)).exclude(Q(user=self.request.user))
             return queryset.all()
         except KeyError :
-            return None
+            raise ValidationError(detail="Does not exist Room id.")
 
 class RequestCheckingView(viewsets.ReadOnlyModelViewSet):
     serializer_class = FriendsParticipationSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        if (self.request.data['request'] == None ) :
+        try:
+            request_id = self.request.GET['request']
+        except KeyError:
             raise ValidationError(detail="Request id가 없습니다.")
-        if len(self.request.data) > 1 :
+        if len(self.request.GET) > 1 :
             raise ValidationError(detail="요청 보낸 데이터가 많습니다.")
-
-        request_id = self.request.data['request']
         # req_instance = FriendsParticipation.objects.filter(Q(id=request_id)).first()
         try:
             req_instance = FriendsParticipation.objects.get(Q(id=request_id))
@@ -136,14 +131,17 @@ class SelectedRequestMatchingView(viewsets.ReadOnlyModelViewSet, mixins.UpdateMo
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        request_id = self.request.data['request']
-        _request = FriendsParticipation.objects.get(Q(id=request_id))
-        queryset = FriendsParticipation.objects.filter(Q(room=_request.room)).exclude(Q(type='c')).exclude(Q(is_accepted='w')).values('party_number').annotate(request_count=Count('party_number')).filter(request_count__exact=_request.room.user_limit).all()
-        party_number = []
-        for e in queryset:
-            party_number.append(e['party_number'])
-        queryset = FriendsParticipation.objects.filter(party_number__in=party_number)
-        return queryset
+        try:
+            request_id = self.request.GET['request']
+            _request = FriendsParticipation.objects.get(Q(id=request_id))
+            queryset = FriendsParticipation.objects.filter(Q(room=_request.room)).exclude(Q(type='c')).exclude(Q(is_accepted='w')).values('party_number').annotate(request_count=Count('party_number')).filter(request_count__exact=_request.room.user_limit).all()
+            party_number = []
+            for e in queryset:
+                party_number.append(e['party_number'])
+            queryset = FriendsParticipation.objects.filter(party_number__in=party_number)
+            return queryset
+        except KeyError:
+            raise ValidationError(detail="Does not request id. Please put request id")
 
     def update(self, request, *args, **kwargs):
         try:
@@ -201,7 +199,7 @@ class RequestUserViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
     def get_queryset(self):
         try:
-            request_id = self.kwargs['pk']
+            request_id = self.request.GET['request']
             # request = FriendsParticipation.objects.filter(Q(id=request_id)).first()
             request = FriendsParticipation.objects.get(Q(id=request_id))
             room_id = request.room.id
@@ -210,29 +208,32 @@ class RequestUserViewSet(viewsets.ReadOnlyModelViewSet):
             return queryset
         except KeyError :
             raise ValidationError(detail="Put request Id")
+        except FriendsParticipation.DoesNotExist:
+            raise ValidationError(detail="Not Found request")
 
 class RequestRoomViewSet(viewsets.ReadOnlyModelViewSet):
-    serializer_class = ParticipatiedRoomSerializer
+    serializer_class = RoomSerializer
     permission_classes = [IsAuthenticated]
     def get_queryset(self):
         try:
-            id = self.kwargs['pk']
-            queryset = FriendsParticipation.objects.select_related('room').filter(Q(id=id))
+            request = FriendsParticipation.objects.get(Q(id=self.request.GET['request']))
+            # print(self.request.GET, self.request.data, self.kwargs, self.args)
+            queryset = Room.objects.filter(Q(id=request.room.id))
+            # print(queryset.query)
             return queryset
+            # return FriendsParticipation.objects.select_related('room').all()
         except KeyError :
-            return None
+            raise ValidationError(detail="Put request Id")
+        except FriendsParticipation.DoesNotExist:
+            raise ValidationError(detail="Not Found request")
     
 
 class InviteeParcitipateRequestViewSet(mixins.UpdateModelMixin, viewsets.ReadOnlyModelViewSet) :
     serializer_class = ParticipationRoomUserSerializer
     permission_classes = [IsAuthenticated]
     def get_queryset(self):
-        try:
-            id = self.kwargs['pk']
-            queryset = FriendsParticipation.objects.select_related('room', 'user').filter(Q(id=id))
-            return queryset
-        except (MultiValueDictKeyError, KeyError) :
-            return FriendsParticipation.objects.select_related('room', 'user').filter(user=self.request.user, type='p', user_role='invitee').exclude(room__status='c')
+        return FriendsParticipation.objects.select_related('room', 'user').filter(user=self.request.user, type='p', user_role='invitee').exclude(room__status='c')
+            
 
     def update(self, request, *args, **kwargs):
         instance = FriendsParticipation.objects.filter(Q(id=kwargs['pk'])).first()
@@ -312,13 +313,9 @@ class InviteeCreateRequestViewSet(mixins.UpdateModelMixin, viewsets.ReadOnlyMode
     serializer_class = ParticipationRoomUserSerializer
     permission_classes = [IsAuthenticated]
     def get_queryset(self):
-        try:
-            id = self.kwargs['pk']
-            queryset = FriendsParticipation.objects.select_related('room', 'user').filter(Q(id=id))
-            return queryset
-        except (MultiValueDictKeyError, KeyError) :
-            queryset = FriendsParticipation.objects.select_related('room', 'user').filter(user=self.request.user, type='c', user_role='invitee').exclude(room__status='c')
-            return queryset
+        queryset = FriendsParticipation.objects.select_related('room', 'user').filter(user=self.request.user, type='c', user_role='invitee').exclude(room__status='c')
+        return queryset
+           
 
     def update(self, request, *args, **kwargs):
         try:
@@ -397,13 +394,9 @@ class InviterParticipateRequestViewSet(mixins.CreateModelMixin, mixins.DestroyMo
     serializer_class = ParticipationRoomUserSerializer
     permission_classes = [IsAuthenticated]
     def get_queryset(self):
-        try:
-            id = self.kwargs['pk']
-            queryset = FriendsParticipation.objects.select_related('room', 'user').filter(Q(id=id))
-            return queryset
-        except (MultiValueDictKeyError, KeyError) :
-            queryset = FriendsParticipation.objects.select_related('room', 'user').filter(user=self.request.user, type='p', user_role='inviter').exclude(room__status='c')
-            return queryset
+        queryset = FriendsParticipation.objects.select_related('room', 'user').filter(user=self.request.user, type='p', user_role='inviter').exclude(room__status='c')
+        return queryset
+            
 
     def create(self, request, *args, **kwargs):
         participation_user_list = request.data.pop('participation_user_list')
