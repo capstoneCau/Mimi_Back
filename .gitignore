@@ -1,10 +1,5 @@
 __pycache__
 *.py[co]
 
-tutorials
-
-# ML Model
-*.h5
-
 # secret file
 secret.py
