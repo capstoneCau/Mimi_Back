@@ -67,7 +67,24 @@ class SearchUserView(viewsets.ReadOnlyModelViewSet):
         except KeyError:
             raise ValidationError("email 데이터를 넣어주세요.")
 
-            
+class FcmTokenView(viewsets.ReadOnlyModelViewSet, mixins.UpdateModelMixin):
+    serializer_class = UserSerializer
+    def get_queryset(self):
+        raise ValidationError(detail="Not GET")
+
+    def update(self, request, *args, **kwargs):
+        kakaoId = kwargs['pk']
+        fcmToken = request.data['fcmToken']
+        print(kakaoId, fcmToken)
+        try:
+            user = User.objects.get(Q(kakao_auth_id=str(kakaoId)))
+            if user.fcmToken == fcmToken:
+                return Response(UserSerializer(user).data, status=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            return Response({"detail":"Not User", "error":404}, status=status.HTTP_404_NOT_FOUND)
+        user = User.objects.filter(Q(kakao_auth_id=kakaoId)).update(**request.data)
+        return Response(UserSerializer(user).data, status=status.HTTP_200_OK)
+
 class CustomAuthToken(APIView):
     throttle_classes = ()
     permission_classes = ()
