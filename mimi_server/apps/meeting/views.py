@@ -134,11 +134,11 @@ class SelectedRequestMatchingView(viewsets.ReadOnlyModelViewSet, mixins.UpdateMo
         try:
             request_id = self.request.GET['request']
             _request = FriendsParticipation.objects.get(Q(id=request_id))
-            queryset = FriendsParticipation.objects.filter(Q(room=_request.room)).exclude(Q(type='c')).exclude(Q(is_accepted='w')).values('party_number').annotate(request_count=Count('party_number')).filter(request_count__exact=_request.room.user_limit).all()
+            queryset = FriendsParticipation.objects.filter(Q(room=_request.room)).exclude(Q(is_accepted='w')).values('party_number').annotate(request_count=Count('party_number')).filter(request_count__exact=_request.room.user_limit).all()
             party_number = []
             for e in queryset:
                 party_number.append(e['party_number'])
-            queryset = FriendsParticipation.objects.filter(party_number__in=party_number)
+            queryset = FriendsParticipation.objects.filter(party_number__in=party_number).exclude(Q(user=self.request.user))
             return queryset
         except KeyError:
             raise ValidationError(detail="Does not request id. Please put request id")
@@ -147,6 +147,7 @@ class SelectedRequestMatchingView(viewsets.ReadOnlyModelViewSet, mixins.UpdateMo
         selectedRequest = FriendsParticipation.objects.filter(Q(party_number=kwargs['pk']))
         if len(selectedRequest) == 0:
             return Response({"detail" : "요청한 Party number는 존재하지 않습니다.", "error" : 404}, status=status.HTTP_404_NOT_FOUND)
+        
         # print(selectedRequest.first().party_number)
         party_number = selectedRequest.first().party_number
         room = selectedRequest.first().room
@@ -155,8 +156,12 @@ class SelectedRequestMatchingView(viewsets.ReadOnlyModelViewSet, mixins.UpdateMo
         # room = selectedRequest.room
 
         # if FriendsParticipation.objects.filter(Q(room=room.id) & Q(user=request.user)).first().user_role != 'inviter' :
-        if FriendsParticipation.objects.get(Q(room=room.id) & Q(user=request.user)).user_role != 'inviter' :
-            return Response({"detail" : "요청한 User가 초대자가 아닙니다.", "error" : 405}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        try:
+            request = FriendsParticipation.objects.get(Q(room=room.id) & Q(user=request.user))
+            if request.user_role != 'inviter' or  request.type != 'c':
+                return Response({"detail" : "요청한 User가 초대자가 아닙니다.", "error" : 405}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        except FriendsParticipation.DoesNotExist:
+            return Response({"detail" : "요청에 대한 데이터가 없습니다.", "error" : 405}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
         selectedRequest = FriendsParticipation.objects.filter(Q(party_number=party_number)).all()
         
