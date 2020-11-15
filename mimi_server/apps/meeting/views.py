@@ -457,9 +457,10 @@ class InviterParticipateRequestViewSet(mixins.CreateModelMixin, mixins.DestroyMo
         return Response(ParticipationRoomUserSerializer(instance).data, status=status.HTTP_201_CREATED)
 
     def destroy(self, request, *args, **kwargs):
-        room, invitee_user = kwargs["pk"].split(":")
-        instance = FriendsParticipation.objects.select_related('room', 'inviter_user', 'invitee_user').filter(Q(inviter_user=request.user) & Q(room=room) & Q(invitee_user=invitee_user)).first()
-        self.perform_destroy(instance)
+        party_number = kwargs['pk']
+        instances = FriendsParticipation.objects.filter(Q(party_number=party_number))
+        for instance in instances:
+            self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 class InviterCreateRequestViewSet(viewsets.ReadOnlyModelViewSet):
