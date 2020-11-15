@@ -147,12 +147,12 @@ class SelectedRequestMatchingView(viewsets.ReadOnlyModelViewSet, mixins.UpdateMo
         selectedRequest = FriendsParticipation.objects.filter(Q(party_number=kwargs['pk']))
         if len(selectedRequest) == 0:
             return Response({"detail" : "요청한 Party number는 존재하지 않습니다.", "error" : 404}, status=status.HTTP_404_NOT_FOUND)
-        
+        # print(selectedRequest.first().party_number)
         party_number = selectedRequest.first().party_number
         room = selectedRequest.first().room
         
-        party_number = selectedRequest.party_number
-        room = selectedRequest.room
+        # party_number = selectedRequest.party_number
+        # room = selectedRequest.room
 
         # if FriendsParticipation.objects.filter(Q(room=room.id) & Q(user=request.user)).first().user_role != 'inviter' :
         if FriendsParticipation.objects.get(Q(room=room.id) & Q(user=request.user)).user_role != 'inviter' :
