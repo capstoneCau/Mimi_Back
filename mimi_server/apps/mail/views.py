@@ -11,7 +11,6 @@ import random
 @api_view(['POST'])
 def mail(request):
     sub = forms.Mail()
-    print(request.data)
     if request.method == 'POST':
         if request.data['address'] != None :
             ranNum = random.randint(100000, 999999)
