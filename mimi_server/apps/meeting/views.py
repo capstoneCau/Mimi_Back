@@ -74,10 +74,10 @@ class RoomViewSet(mixins.CreateModelMixin, mixins.DestroyModelMixin, viewsets.Re
         return Response(RoomSerializer(createdRoom).data, status=status.HTTP_200_OK)
     def destroy(self, request, *args, **kwargs):
         try:
-            meeting = Meeting.objects.get(Q(room=kwargs['pk']) & Q(user=request.user))
-        except Meeting.DoesNotExist:
+            request = FriendsParticipation.objects.get(Q(room=kwargs['pk']) & Q(user=request.user))
+        except FriendsParticipation.DoesNotExist:
             return Response({"detail":"The user does not belong to the room.", "error" : 404}, status=status.HTTP_404_NOT_FOUND)
-        if meeting.user_role != 'a':
+        if request.user_role != 'inviter' or request.type != 'c':
             return Response({"detail":"The user is not a room manager.", "error" : 401}, status=status.HTTP_401_UNAUTHORIZED)
         instance = Room.objects.filter(Q(id=kwargs['pk'])).first()
         self.perform_destroy(instance)
