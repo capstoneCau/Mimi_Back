@@ -144,10 +144,12 @@ class SelectedRequestMatchingView(viewsets.ReadOnlyModelViewSet, mixins.UpdateMo
             raise ValidationError(detail="Does not request id. Please put request id")
 
     def update(self, request, *args, **kwargs):
-        try:
-            selectedRequest = FriendsParticipation.objects.get(Q(id=kwargs['pk']))
-        except FriendsParticipation.DoesNotExist:
-            return Response({"detail" : "요청한 ID는 존재하지 않습니다.", "error" : 404}, status=status.HTTP_404_NOT_FOUND)
+        selectedRequest = FriendsParticipation.objects.filter(Q(party_number=kwargs['pk']))
+        if len(selectedRequest) == 0:
+            return Response({"detail" : "요청한 Party number는 존재하지 않습니다.", "error" : 404}, status=status.HTTP_404_NOT_FOUND)
+        
+        party_number = selectedRequest.first().party_number
+        room = selectedRequest.first().room
         
         party_number = selectedRequest.party_number
         room = selectedRequest.room
