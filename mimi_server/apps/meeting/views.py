@@ -134,11 +134,11 @@ class SelectedRequestMatchingView(viewsets.ReadOnlyModelViewSet, mixins.UpdateMo
         try:
             request_id = self.request.GET['request']
             _request = FriendsParticipation.objects.get(Q(id=request_id))
-            queryset = FriendsParticipation.objects.filter(Q(room=_request.room)).exclude(Q(is_accepted='w')).values('party_number').annotate(request_count=Count('party_number')).filter(request_count__exact=_request.room.user_limit).all()
+            queryset = FriendsParticipation.objects.filter(Q(room=_request.room)).exclude(Q(party_number=_request.party_number)).exclude(Q(is_accepted='w')).values('party_number').annotate(request_count=Count('party_number')).filter(request_count__exact=_request.room.user_limit).all()
             party_number = []
             for e in queryset:
                 party_number.append(e['party_number'])
-            queryset = FriendsParticipation.objects.filter(party_number__in=party_number).exclude(Q(user=self.request.user))
+            queryset = FriendsParticipation.objects.filter(party_number__in=party_number)
             return queryset
         except KeyError:
             raise ValidationError(detail="Does not request id. Please put request id")
