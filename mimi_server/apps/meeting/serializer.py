@@ -99,7 +99,7 @@ class ParticipationRoomUserSerializer(serializers.ModelSerializer):
     user = UserSerializer()
     class Meta:
         model = FriendsParticipation
-        fields = ['id', 'type', 'is_accepted', 'room', 'user', 'user_role']
+        fields = ['id', 'type', 'is_accepted', 'room', 'user', 'user_role', 'party_number']
 
 class ParticipatiedUserSerializer(serializers.ModelSerializer):
     user = UserField(queryset=User.objects.all())
