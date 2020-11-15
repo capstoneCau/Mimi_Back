@@ -13,7 +13,7 @@ from rest_framework.exceptions import ValidationError
 from django.db.models import Count
 
 from .serializer import RoomSerializer, MeetingRoomSerializer, MeetingUserSerializer, ParticipationRoomUserSerializer, \
-    ParticipatiedUserSerializer, ParticipatiedRoomSerializer, FriendsParticipationSerializer
+    ParticipatiedUserSerializer, ParticipatiedRoomSerializer, FriendsParticipationSerializer, SelectedParticipationSerializer
 
 from ..notification.views import send
 class RoomViewSet(mixins.CreateModelMixin, mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
@@ -127,7 +127,7 @@ class RequestCheckingView(viewsets.ReadOnlyModelViewSet):
         return FriendsParticipation.objects.filter(Q(room=req_instance.room) & Q(party_number=req_instance.party_number)).exclude(Q(user=self.request.user))
 
 class SelectedRequestMatchingView(viewsets.ReadOnlyModelViewSet, mixins.UpdateModelMixin):
-    serializer_class = FriendsParticipationSerializer
+    serializer_class = SelectedParticipationSerializer
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):

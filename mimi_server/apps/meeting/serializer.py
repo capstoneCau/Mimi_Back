@@ -66,6 +66,12 @@ class FriendsParticipationSerializer(serializers.ModelSerializer):
         model = FriendsParticipation
         fields = ['id', 'room', 'user', 'type', 'is_accepted', 'user_role', 'party_number']
 
+class SelectedParticipationSerializer(serializers.ModelSerializer):
+    user = UserSerializer()
+    class Meta:
+        model = FriendsParticipation
+        fields = ['user', 'party_number']
+
 class MeetingRoomSerializer(serializers.ModelSerializer) :
     # meetings = MeetingSerializer(many=True)
     room = RoomField(queryset=Room.objects.all())
