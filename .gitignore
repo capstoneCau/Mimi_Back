@@ -1,5 +1,8 @@
 __pycache__
 *.py[co]
 
+# Model File
+model/
+
 # secret file
 secret.py
