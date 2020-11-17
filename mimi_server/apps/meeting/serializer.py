@@ -105,7 +105,7 @@ class ParticipatiedUserSerializer(serializers.ModelSerializer):
     user = UserField(queryset=User.objects.all())
     class Meta:
         model = FriendsParticipation
-        fields = ['user', 'user_role']
+        fields = ['user', 'user_role', 'is_accepted']
 
 class ParticipatiedRoomSerializer(serializers.ModelSerializer):
     room = RoomField(queryset=Room.objects.all())
