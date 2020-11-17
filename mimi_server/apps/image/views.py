@@ -1,7 +1,8 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
-from mimi_server.apps.image.animal_similarrity import determinAnimal
+from mimi_server.apps.image.animal_similarity import determinAnimal
+
 
 @api_view(['POST'])
 def upload_file(request):
@@ -14,4 +15,4 @@ def upload_file(request):
         else:
             return Response(result, status=result['error'])
     else:
-        return Response({"not post" : "not post"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"not post": "not post"}, status=status.HTTP_400_BAD_REQUEST)
