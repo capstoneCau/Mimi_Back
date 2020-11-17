@@ -75,15 +75,19 @@ class FcmTokenView(viewsets.ReadOnlyModelViewSet, mixins.UpdateModelMixin):
     def update(self, request, *args, **kwargs):
         kakaoId = kwargs['pk']
         fcmToken = request.data['fcmToken']
-        print(kakaoId, fcmToken)
         try:
             user = User.objects.get(Q(kakao_auth_id=str(kakaoId)))
             if user.fcmToken == fcmToken:
                 return Response(UserSerializer(user).data, status=status.HTTP_200_OK)
         except User.DoesNotExist:
             return Response({"detail":"Not User", "error":404}, status=status.HTTP_404_NOT_FOUND)
-        user = User.objects.filter(Q(kakao_auth_id=kakaoId)).update(**request.data)
-        return Response(UserSerializer(user).data, status=status.HTTP_200_OK)
+        
+        partial = kwargs.pop('partial', False)
+        serializer = self.get_serializer(user, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 class CustomAuthToken(APIView):
     throttle_classes = ()
