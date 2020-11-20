@@ -45,7 +45,7 @@ INSTALLED_APPS = [
     'mimi_server.apps.notification',
     'mimi_server.apps.image',
     'rest_framework',
-    'rest_framework.authtoken', #TODO Only use at debug mode
+    'rest_framework.authtoken',  # TODO Only use at debug mode
     # CORS
     'corsheaders',
 ]
@@ -77,13 +77,13 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'mimi_server.urls'
 
 # Email
-EMAIL_BACKEND       = secret.EMAIL['EMAIL_BACKEND']
-EMAIL_USE_TLS       = secret.EMAIL['EMAIL_USE_TLS']      
-EMAIL_PORT          = secret.EMAIL['EMAIL_PORT']                
-EMAIL_HOST          = secret.EMAIL['EMAIL_HOST']
-EMAIL_HOST_USER     = secret.EMAIL['EMAIL_HOST_USER']
+EMAIL_BACKEND = secret.EMAIL['EMAIL_BACKEND']
+EMAIL_USE_TLS = secret.EMAIL['EMAIL_USE_TLS']
+EMAIL_PORT = secret.EMAIL['EMAIL_PORT']
+EMAIL_HOST = secret.EMAIL['EMAIL_HOST']
+EMAIL_HOST_USER = secret.EMAIL['EMAIL_HOST_USER']
 EMAIL_HOST_PASSWORD = secret.EMAIL['EMAIL_HOST_PASSWORD']
-SERVER_EMAIL        = secret.EMAIL['SERVER_EMAIL']
+SERVER_EMAIL = secret.EMAIL['SERVER_EMAIL']
 
 CORS_ORIGIN_ALLOW_ALL = False
 CORS_ORIGIN_WHITELIST = (
@@ -149,3 +149,5 @@ USE_TZ = False
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
 
 STATIC_URL = '/static/'
+
+ANIMAL_IMAGE_PATH = os.path.join(BASE_DIR, 'animal_image')
