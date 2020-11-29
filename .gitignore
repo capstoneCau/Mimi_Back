@@ -6,3 +6,6 @@ model/
 
 # secret file
 secret.py
+service-account-file.json
+# api document
+*.docx

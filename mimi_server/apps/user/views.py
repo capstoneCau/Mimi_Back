@@ -13,11 +13,14 @@ from rest_framework import parsers, renderers
 # from rest_framework.authtoken.serializers import AuthTokenSerializer
 from rest_framework.compat import coreapi, coreschema
 from rest_framework.schemas import ManualSchema
+from mimi_server.firebase import registerUser
+
 
 class CreateUserAPIView(CreateAPIView):
     serializer_class = UserSerializer
 
     def create(self, request, *args, **kwargs):
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
@@ -25,6 +28,7 @@ class CreateUserAPIView(CreateAPIView):
         # We create a token than will be used for future auth
         token = Token.objects.create(user=serializer.instance)
         token_data = {"token": token.key}
+        registerUser(request.data['kakao_auth_id'], request.data['email'])
         return Response(
             {**serializer.data, **token_data},
             status=status.HTTP_201_CREATED,
@@ -40,35 +44,40 @@ class LogoutUserAPIView(APIView):
         request.user.auth_token.delete()
         return Response(status=status.HTTP_200_OK)
 
+
 class UserFcmTokenView(mixins.UpdateModelMixin, viewsets.ReadOnlyModelViewSet):
     serializer_class = UserSerializer
     queryset = User.objects.all()
-    def update(self, request, *args, **kwargs):
-        if (request.data['fcmToken'] == None) :
-            return Response({"detail" : "There is no fcm token.", "error": 400}, statu=status.HTTP_400_BAD_REQUEST)
-        
-        if (len(request.data) >= 2):
-            return Response({"detail" : "Only the fcm token can be modified.", "error": 400}, statu=status.HTTP_400_BAD_REQUEST)
 
-        if (User.objects.filter(Q(kakao_auth_id=request.user)).first() == None) :
-            return Response({"detail" : "The user does not exist."})
-        
+    def update(self, request, *args, **kwargs):
+        if (request.data['fcmToken'] == None):
+            return Response({"detail": "There is no fcm token.", "error": 400}, statu=status.HTTP_400_BAD_REQUEST)
+
+        if (len(request.data) >= 2):
+            return Response({"detail": "Only the fcm token can be modified.", "error": 400}, statu=status.HTTP_400_BAD_REQUEST)
+
+        if (User.objects.filter(Q(kakao_auth_id=request.user)).first() == None):
+            return Response({"detail": "The user does not exist."})
+
         return super.update(request, args, kwargs)
+
 
 class SearchUserView(viewsets.ReadOnlyModelViewSet):
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        try :
-            email = self.request.data['email']
+        try:
+            email = self.request.GET['email']
             queryset = User.objects.filter(Q(email=email))
             return queryset
         except KeyError:
             raise ValidationError("email 데이터를 넣어주세요.")
 
+
 class FcmTokenView(viewsets.ReadOnlyModelViewSet, mixins.UpdateModelMixin):
     serializer_class = UserSerializer
+
     def get_queryset(self):
         raise ValidationError(detail="Not GET")
 
@@ -80,19 +89,22 @@ class FcmTokenView(viewsets.ReadOnlyModelViewSet, mixins.UpdateModelMixin):
             if user.fcmToken == fcmToken:
                 return Response(UserSerializer(user).data, status=status.HTTP_200_OK)
         except User.DoesNotExist:
-            return Response({"detail":"Not User", "error":404}, status=status.HTTP_404_NOT_FOUND)
-        
+            return Response({"detail": "Not User", "error": 404}, status=status.HTTP_404_NOT_FOUND)
+
         partial = kwargs.pop('partial', False)
-        serializer = self.get_serializer(user, data=request.data, partial=partial)
+        serializer = self.get_serializer(
+            user, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
-        
+
         return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 class CustomAuthToken(APIView):
     throttle_classes = ()
     permission_classes = ()
-    parser_classes = (parsers.FormParser, parsers.MultiPartParser, parsers.JSONParser,)
+    parser_classes = (parsers.FormParser,
+                      parsers.MultiPartParser, parsers.JSONParser,)
     renderer_classes = (renderers.JSONRenderer,)
     serializer_class = CustomAuthTokenSerializer
     if coreapi is not None and coreschema is not None:
@@ -122,44 +134,48 @@ class CustomAuthToken(APIView):
 
 obtain_auth_token = CustomAuthToken.as_view()
 
+
 class FriendsViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin, viewsets.ReadOnlyModelViewSet):
     serializer_class = FriendsSerializer
     permission_classes = [IsAuthenticated]
-    def get_queryset(self) :
-        queryset = Friends.objects.filter(Q(from_user=self.request.user) & Q(type='f'))
+
+    def get_queryset(self):
+        queryset = Friends.objects.filter(
+            Q(from_user=self.request.user) & Q(type='f'))
         return queryset
-    
+
     def create(self, request, *args, **kwargs):
         request.data.update({
-            'from_user' : request.user,
-            'to_user' : User.objects.get(kakao_auth_id=request.data['to_user'])
+            'from_user': request.user,
+            'to_user': User.objects.get(kakao_auth_id=request.data['to_user'])
         })
 
-        if request.data['to_user'].kakao_auth_id == request.data['from_user'].kakao_auth_id :
-            return Response({"detaile" : "The person to add as a friend is incorrect.", "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
-        
-        if len(Friends.objects.filter(Q(from_user=request.data['from_user'].kakao_auth_id) & Q(to_user=request.data['to_user'].kakao_auth_id))) > 0 :
-            return Response({"detaile" : "Already exists.", "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
+        if request.data['to_user'].kakao_auth_id == request.data['from_user'].kakao_auth_id:
+            return Response({"detaile": "The person to add as a friend is incorrect.", "error": 400}, status=status.HTTP_400_BAD_REQUEST)
+
+        if len(Friends.objects.filter(Q(from_user=request.data['from_user'].kakao_auth_id) & Q(to_user=request.data['to_user'].kakao_auth_id))) > 0:
+            return Response({"detaile": "Already exists.", "error": 400}, status=status.HTTP_400_BAD_REQUEST)
 
         friend = Friends.objects.create(**request.data)
         print(FriendsSerializer(friend).data)
         return Response(FriendsSerializer(friend).data, status=status.HTTP_201_CREATED)
-    
+
     def update(self, request, *args, **kwargs):
         try:
             if request.data['type'] == None:
-                return Response({"detail" : "You must send type data.", "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
-            if len(request.data) >= 2 :
-                return Response({"detail" : "You must send only type data.", "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
-            
+                return Response({"detail": "You must send type data.", "error": 400}, status=status.HTTP_400_BAD_REQUEST)
+            if len(request.data) >= 2:
+                return Response({"detail": "You must send only type data.", "error": 400}, status=status.HTTP_400_BAD_REQUEST)
+
             friends_id = kwargs['pk']
             partial = kwargs.pop('partial', False)
             instance = Friends.objects.filter(Q(id=friends_id)).first()
 
-            if instance.type == request.data['type'] :
-                return Response({"detail" : "It is the same type.", "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
+            if instance.type == request.data['type']:
+                return Response({"detail": "It is the same type.", "error": 400}, status=status.HTTP_400_BAD_REQUEST)
 
-            serializer = self.get_serializer(instance, data=request.data, partial=partial)
+            serializer = self.get_serializer(
+                instance, data=request.data, partial=partial)
             serializer.is_valid(raise_exception=True)
             self.perform_update(serializer)
 
@@ -171,4 +187,4 @@ class FriendsViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.De
             return Response(serializer.data)
 
         except KeyError:
-            return Response({"detail" : "The url is invalid. Please enter the id in the url.", "error" : 400}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "The url is invalid. Please enter the id in the url.", "error": 400}, status=status.HTTP_400_BAD_REQUEST)
