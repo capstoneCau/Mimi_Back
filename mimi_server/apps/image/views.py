@@ -34,10 +34,14 @@ def get_animal_image(request):
         random.shuffle(imageInstances)
         images = []
         for i in range(3):
+            obj = {
+                'id': imageInstances[i].id
+            }
             filename = str(imageInstances[i].imgData).split("/")[2]
             path = os.path.join(os.path.join(
                 ANIMAL_IMAGE_PATH, imageLabel), filename)
             with open(path, 'rb') as f:
-                images.append(base64.b64encode(f.read()))
-
+                obj['base64'] = base64.b64encode(f.read())
+                # images.append(base64.b64encode(f.read()))
+            images.append(obj)
         return Response({"images": images}, status=status.HTTP_200_OK)
