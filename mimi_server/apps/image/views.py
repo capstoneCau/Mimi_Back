@@ -7,6 +7,8 @@ from django.db.models import Q
 import random
 import os
 import base64
+from PIL import Image
+from io import BytesIO
 from mimi_server.settings import ANIMAL_IMAGE_PATH
 
 
@@ -40,8 +42,13 @@ def get_animal_image(request):
             filename = str(imageInstances[i].imgData).split("/")[2]
             path = os.path.join(os.path.join(
                 ANIMAL_IMAGE_PATH, imageLabel), filename)
-            with open(path, 'rb') as f:
-                obj['base64'] = base64.b64encode(f.read())
-                # images.append(base64.b64encode(f.read()))
+            image = Image.open(path)
+            image = image.resize((80, 80), Image.ANTIALIAS)
+            buffered = BytesIO()
+            image.save(buffered, format='JPEG')
+            obj['base64'] = base64.b64encode(buffered.getvalue())
+            # with open(path, 'rb') as f:
+            # obj['base64'] = base64.b64encode(f.read())
+            # images.append(base64.b64encode(f.read()))
             images.append(obj)
         return Response({"images": images}, status=status.HTTP_200_OK)
