@@ -12,7 +12,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticate
 from rest_framework.exceptions import ValidationError
 from django.db.models import Count
 
-from mimi_server.firebase import makeChattingRoom
+from mimi_server.firebase import makeChattingRoom, deleteChattingRoom
 
 from .serializer import RoomSerializer, MeetingRoomSerializer, MeetingUserSerializer, ParticipationRoomUserSerializer, \
     ParticipatiedUserSerializer, ParticipatiedRoomSerializer, FriendsParticipationSerializer, SelectedParticipationSerializer
@@ -81,13 +81,22 @@ class RoomViewSet(mixins.CreateModelMixin, mixins.DestroyModelMixin, viewsets.Re
 
     def destroy(self, request, *args, **kwargs):
         try:
-            request = FriendsParticipation.objects.get(
+            _request = FriendsParticipation.objects.get(
                 Q(room=kwargs['pk']) & Q(user=request.user))
         except FriendsParticipation.DoesNotExist:
             return Response({"detail": "The user does not belong to the room.", "error": 404}, status=status.HTTP_404_NOT_FOUND)
-        if request.user_role != 'inviter' or request.type != 'c':
-            return Response({"detail": "The user is not a room manager.", "error": 401}, status=status.HTTP_401_UNAUTHORIZED)
+        # if request.user_role != 'inviter' or request.type != 'c':
+        #     return Response({"detail": "The user is not a room manager.", "error": 401}, status=status.HTTP_401_UNAUTHORIZED)
+
         instance = Room.objects.filter(Q(id=kwargs['pk'])).first()
+        fcmTokens = [request.user.fcmToken]
+        ids = [request.user.kakao_auth_id]
+        # for e in Meeting.objects.filter(Q(room=kwargs['pk'])).all():
+        # if e.user.fcmToken != None:
+        # fcmTokens.append(e.user.fcmToken)
+        deleteChattingRoom(request.data['chatId'])
+        if request.data['isNotification']:
+            send(fcmTokens, '안전 귀가 서비스', '안전 귀가 서비스가 시작됩니다.', 'SAFE_RETURN', ids)
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -165,6 +174,7 @@ class SelectedRequestMatchingView(viewsets.ReadOnlyModelViewSet, mixins.UpdateMo
         selectedRequest = FriendsParticipation.objects.filter(
             Q(party_number=kwargs['pk']))
         allUserIds = []
+        allUserNames = []
         if len(selectedRequest) == 0:
             return Response({"detail": "요청한 Party number는 존재하지 않습니다.", "error": 404}, status=status.HTTP_404_NOT_FOUND)
 
@@ -190,7 +200,7 @@ class SelectedRequestMatchingView(viewsets.ReadOnlyModelViewSet, mixins.UpdateMo
         for req in selectedRequest:
             if(req.is_accepted != 'a'):
                 return Response({"detail": "모든 유저가 수락하지 않은 요청 데이터입니다.", "error": 405}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
-            allUserIds.append(req.user.kakao_auth_id)
+            # allUserIds.append(req.user.kakao_auth_id)
 
         rejectedUserFcmList = []
         matchedUserFcmList = []
@@ -221,9 +231,13 @@ class SelectedRequestMatchingView(viewsets.ReadOnlyModelViewSet, mixins.UpdateMo
             }
             Meeting.objects.create(**meetingInfo)
             matchedUserFcmList.append(e.user.fcmToken)
+            # allUserIds.append(e.user.kakao_auth_id)
+        for e in Meeting.objects.filter(Q(room=room.id)).all():
             allUserIds.append(e.user.kakao_auth_id)
+            allUserNames.append(e.user.name)
+        print(allUserIds, allUserNames)
         # send(matchedUserFcmList, "요청한 미팅이 매칭되었습니다.", "요청한 미팅이 매칭되었습니다.")
-        makeChattingRoom(room.id, allUserIds)
+        makeChattingRoom(room.id, allUserIds, allUserNames)
         return Response(RoomSerializer(room).data, status=status.HTTP_200_OK)
 
 

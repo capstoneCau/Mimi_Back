@@ -5,11 +5,11 @@ from uuid import uuid4
 from firebase_admin import firestore, initialize_app, credentials, auth
 from secret import GOOGLE_APPLICATION_CREDENTIALS
 
-__all__ = ['makeChattingRoom']
+__all__ = ['makeChattingRoom', 'deleteChattingRoom', 'registerUser']
 initialize_app(credentials.Certificate(GOOGLE_APPLICATION_CREDENTIALS))
 
 
-def makeChattingRoom(roomId, users):
+def makeChattingRoom(roomId, users, names):
     db = firestore.client()
     db.collection(u'CHATINGS').add({
         u'roomId': roomId,
@@ -17,12 +17,18 @@ def makeChattingRoom(roomId, users):
             u'text': u'Matching was successful.',
             u'createdAt': int(time.time() * 1000),
         },
-        u'users': users
+        u'users': users,
+        u'name': ','.join(names)
     })[1].collection(u'MESSAGES').add({
         u'text': u'Matching was successful.',
         u'createdAt': int(time.time() * 1000),
         u'system': True,
     })
+
+
+def deleteChattingRoom(chatId):
+    db = firestore.client()
+    db.collection(u'CHATINGS').document(chatId).delete()
 
 
 def registerUser(kakao_auth_id, email):
