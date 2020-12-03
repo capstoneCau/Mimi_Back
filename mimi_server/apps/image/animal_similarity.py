@@ -1,14 +1,18 @@
-from tensorflow.python.keras.models import load_model
 import numpy as np
 import os
 import io
 import base64
+import cv2
 # 2. Model 불러오기
+from imageio import imread
 from tensorflow.python.keras.models import load_model
+
+from mimi_server.celery import app
+from mimi_server.apps.image.kakaoFaceAPI import faceDetect
 from mimi_server.settings import BASE_DIR
-from .kakaoFaceAPI import faceDetect
 
 
+@app.task
 def determinAnimal(imageData, gender):
     modelPath = os.path.join(BASE_DIR, 'model')
     if gender == 'male':
@@ -17,7 +21,10 @@ def determinAnimal(imageData, gender):
     elif gender == 'female':
         model = load_model(os.path.join(
             modelPath, 'animal_model_woman.h5'), compile=False)
-    categories = ['dog', 'cat', 'bear', 'hamster', 'horse', 'wolf']
+    categories = {
+        'male': ['dog', 'cat', 'bear', 'hamster', 'horse', 'wolf', 'dinosaur'],
+        'female': ['dog', 'cat', 'rabbit', 'squirrel', 'deer', 'fox', 'penguin']
+    }
     image = base64.b64decode(imageData)
     try:
         x, y, w, h = faceDetect(image)
@@ -43,16 +50,16 @@ def determinAnimal(imageData, gender):
     print(y_predicted[0], sortedIndex)
     retunValue = [
         {
-            'category': categories[sortedIndex[0]],
-            'predict_rate': y_predicted[0][sortedIndex[0]]
+            'category': categories[gender][sortedIndex[0]],
+            'predict_rate': float(y_predicted[0][sortedIndex[0]])
         },
         {
-            'category': categories[sortedIndex[1]],
-            'predict_rate': y_predicted[0][sortedIndex[1]]
+            'category': categories[gender][sortedIndex[1]],
+            'predict_rate': float(y_predicted[0][sortedIndex[1]])
         },
         {
-            'category': categories[sortedIndex[2]],
-            'predict_rate': y_predicted[0][sortedIndex[2]]
+            'category': categories[gender][sortedIndex[2]],
+            'predict_rate': float(y_predicted[0][sortedIndex[2]])
         }
     ]
     print(retunValue)

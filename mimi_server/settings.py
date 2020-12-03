@@ -32,6 +32,7 @@ ALLOWED_HOSTS = secret.ALLOWED_HOSTS
 # Application definition
 
 INSTALLED_APPS = [
+    # 'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -107,7 +108,13 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'mimi_server.wsgi.application'
-
+# ASGI_APPLICATION = 'mimi_server.routing.application'
+# CHANNEL_LAYERS = {
+#     'default': {
+#         # 'BACKEND': 'asgi_redis.RedisChannelLayer',
+#         'ROUTING': 'mimi_server.routing.application',
+#     }
+# }
 
 DATABASES = secret.DATABASES
 
@@ -151,3 +158,10 @@ USE_TZ = False
 STATIC_URL = '/static/'
 
 ANIMAL_IMAGE_PATH = os.path.join(BASE_DIR, 'animal_image')
+
+# Celery
+CELERY_BROKER_URL = 'redis://localhost:6379'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379'
+# CELERY_ACCEPT_CONTENT = ['application/json']
+# CELERY_TAST_SERIALIZER = 'json'
+# CELERY_RESULT_SERIALIZER = 'json'
