@@ -9,3 +9,5 @@ secret.py
 service-account-file.json
 # api document
 *.docx
+
+*.rdb
