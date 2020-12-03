@@ -10,18 +10,30 @@ import base64
 from PIL import Image
 from io import BytesIO
 from mimi_server.settings import ANIMAL_IMAGE_PATH
+from celery.result import AsyncResult
 
 
-@api_view(['POST'])
+@api_view(['POST', 'GET'])
 def detect_face(request):
     if request.method == 'POST':
+        # print(request.data)
         imageData = request.data['base64']
         gender = request.data['gender']
-        result = determinAnimal(imageData, gender)
-        if type(result) is list:
-            return Response(result, status=status.HTTP_200_OK)
+        task_id = determinAnimal.delay(imageData, gender)
+        return Response({"task_id": task_id.id}, status=status.HTTP_200_OK)
+
+    elif request.method == 'GET':
+        task_id = request.GET['task_id']
+        task_result = AsyncResult(task_id)
+        if task_result.status == 'SUCCESS':
+            result = task_result.result
+
+            if type(result) is list:
+                return Response(result, status=status.HTTP_200_OK)
+            else:
+                return Response(result, status=result['error'])
         else:
-            return Response(result, status=result['error'])
+            return Response({"detail": "Operation is in progress.", "status": task_result.status}, status=status.HTTP_200_OK)
     else:
         return Response({"not post": "not post"}, status=status.HTTP_400_BAD_REQUEST)
 
