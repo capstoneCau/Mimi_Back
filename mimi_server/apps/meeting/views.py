@@ -94,7 +94,7 @@ class RoomViewSet(mixins.CreateModelMixin, mixins.DestroyModelMixin, viewsets.Re
         # for e in Meeting.objects.filter(Q(room=kwargs['pk'])).all():
         # if e.user.fcmToken != None:
         # fcmTokens.append(e.user.fcmToken)
-        deleteChattingRoom(request.data['chatId'])
+        deleteChattingRoom(kwargs['pk'])
         if request.data['isNotification']:
             send(fcmTokens, '안전 귀가 서비스', '안전 귀가 서비스가 시작됩니다.', 'SAFE_RETURN', ids)
         self.perform_destroy(instance)
