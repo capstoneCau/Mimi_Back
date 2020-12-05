@@ -29,7 +29,7 @@ def makeChattingRoom(roomId, users, names):
 def deleteChattingRoom(roomId):
     db = firestore.client()
     for doc in db.collection(u'CHATINGS').get():
-        if(doc.get('roomId') == roomId):
+        if(str(doc.get('roomId')) == roomId):
             db.collection(u'CHATINGS').document(doc.id).delete()
             break
 

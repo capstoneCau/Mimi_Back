@@ -5,15 +5,17 @@ from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 from rest_framework import viewsets, status, mixins
 from rest_framework.views import APIView
-from mimi_server.apps.user.serializer import UserSerializer, UserViewSerializer, CustomAuthTokenSerializer, FriendsSerializer
-from mimi_server.apps.user.models import User, Friends
 from django.db.models import Q
 from rest_framework.exceptions import ValidationError
 from rest_framework import parsers, renderers
 # from rest_framework.authtoken.serializers import AuthTokenSerializer
 from rest_framework.compat import coreapi, coreschema
 from rest_framework.schemas import ManualSchema
+
 from mimi_server.firebase import registerUser
+from mimi_server.apps.user.serializer import UserSerializer, UserViewSerializer, CustomAuthTokenSerializer, FriendsSerializer
+from mimi_server.apps.user.models import User, Friends
+from mimi_server.apps.notification.views import send
 
 
 class CreateUserAPIView(CreateAPIView):
