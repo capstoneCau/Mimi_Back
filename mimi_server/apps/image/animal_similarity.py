@@ -10,10 +10,11 @@ from tensorflow.python.keras.models import load_model
 from mimi_server.celery import app
 from mimi_server.apps.image.kakaoFaceAPI import faceDetect
 from mimi_server.settings import BASE_DIR
+from mimi_server.apps.notification.views import send
 
 
 @app.task
-def determinAnimal(imageData, gender):
+def determinAnimal(imageData, gender, fcm):
     modelPath = os.path.join(BASE_DIR, 'model')
     if gender == 'male':
         model = load_model(os.path.join(
@@ -22,14 +23,22 @@ def determinAnimal(imageData, gender):
         model = load_model(os.path.join(
             modelPath, 'animal_model_woman.h5'), compile=False)
     categories = {
-        'male': ['dog', 'cat', 'bear', 'hamster', 'horse', 'wolf', 'dinosaur'],
-        'female': ['dog', 'cat', 'rabbit', 'squirrel', 'deer', 'fox', 'penguin']
+        'male': ['dog', 'cat', 'bear', 'hamster', 'horse', 'wolf', 'dinosaur', 'racoon'],
+        'female': ['dog', 'cat', 'rabbit', 'squirrel', 'deer', 'fox', 'penguin', 'snake']
     }
     image = base64.b64decode(imageData)
     try:
         x, y, w, h = faceDetect(image)
-    except ValueError:
-        return {"detail": "Please take a picture alone.", "error": 409}
+    except ValueError as e:
+        if str(e).startswith('GREAT'):
+            send(fcm, dtitle='ANIMAL', dbody={
+                "detail": "Please take a picture alone.", "error": 409})
+            return {"detail": "Please take a picture alone.", "error": 409}
+
+        elif str(e).startswith('ZERO'):
+            send(fcm, dtitle='ANIMAL', dbody={
+                "detail": "Take a Face recognition failed.", "error": 404})
+            return {"detail": "Take a Face recognition failed.", "error": 404}
 
     test_img = imread(io.BytesIO(image))
 
@@ -44,7 +53,9 @@ def determinAnimal(imageData, gender):
     try:
         y_predicted = model.predict(test)
     except ValueError:
-        return {"detail": "The face is not recognized in the picture.", "error": 404}
+        send(fcm, dtitle='ANIMAL', dbody={
+             "detail": "The face is not recognized in the picture.", "error": 400})
+        return {"detail": "The face is not recognized in the picture.", "error": 400}
     sortedIndex = np.argsort(y_predicted)[0][::-1]
     np.set_printoptions(suppress=True)
     print(y_predicted[0], sortedIndex)
@@ -63,4 +74,5 @@ def determinAnimal(imageData, gender):
         }
     ]
     print(retunValue)
+    send(fcm, dtitle='ANIMAL', dbody=retunValue)
     return retunValue
