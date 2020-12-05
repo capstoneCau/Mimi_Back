@@ -28,6 +28,8 @@ def sendNotification(request):
 
 
 def send(fcmList, ntitle=None, nbody=None, dtitle=None, dbody=None):
+
+    fcmList = list(set(fcmList))
     print(fcmList, ntitle, nbody, dtitle, dbody)
     headers = {
         'Content-Type': 'application/json; charset=utf-8',
@@ -57,7 +59,7 @@ def send(fcmList, ntitle=None, nbody=None, dtitle=None, dbody=None):
             "content_available": True,
             "priority": "high"
         }
-        data[data] = {
+        data['data'] = {
             "title": dtitle if dtitle != None else ntitle,
             "body": dbody if dbody != None else nbody,
             "content_available": True,
