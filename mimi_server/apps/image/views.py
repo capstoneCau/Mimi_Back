@@ -19,7 +19,8 @@ def detect_face(request):
         # print(request.data)
         imageData = request.data['base64']
         gender = request.data['gender']
-        task_id = determinAnimal.delay(imageData, gender)
+        fcm = request.data['fcm']
+        task_id = determinAnimal.delay(imageData, gender, [fcm])
         return Response({"task_id": task_id.id}, status=status.HTTP_200_OK)
 
     elif request.method == 'GET':
@@ -36,7 +37,6 @@ def detect_face(request):
             return Response({"detail": "Operation is in progress.", "status": task_result.status}, status=status.HTTP_200_OK)
     else:
         return Response({"not post": "not post"}, status=status.HTTP_400_BAD_REQUEST)
-
 
 @api_view(['GET'])
 def get_animal_image(request):

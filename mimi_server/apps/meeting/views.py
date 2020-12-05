@@ -63,9 +63,8 @@ class RoomViewSet(mixins.CreateModelMixin, mixins.DestroyModelMixin, viewsets.Re
                 "party_number": str(createdRoom.id) + inviter.kakao_auth_id
             }
             FriendsParticipation.objects.create(**createdData)
-            inviteeFcmList.append(invitee.fcmToken)
-
-        # send(inviteeFcmList, "미팅 생성 요청이 왔습니다.", inviter.name + "님께서 미팅 생성 요청을 보냈습니다.")
+            if invitee.fcmToken != None:
+                inviteeFcmList.append(invitee.fcmToken)
 
         createdData = {
             "room": createdRoom,
@@ -76,7 +75,8 @@ class RoomViewSet(mixins.CreateModelMixin, mixins.DestroyModelMixin, viewsets.Re
             "party_number": str(createdRoom.id) + inviter.kakao_auth_id
         }
         FriendsParticipation.objects.create(**createdData)
-
+        send(inviteeFcmList, ntitle="미팅 생성 요청이 왔습니다.",
+             nbody=(inviter.name + "님께서 미팅 생성 요청을 보냈습니다."))
         return Response(RoomSerializer(createdRoom).data, status=status.HTTP_200_OK)
 
     def destroy(self, request, *args, **kwargs):
@@ -89,15 +89,19 @@ class RoomViewSet(mixins.CreateModelMixin, mixins.DestroyModelMixin, viewsets.Re
         #     return Response({"detail": "The user is not a room manager.", "error": 401}, status=status.HTTP_401_UNAUTHORIZED)
 
         instance = Room.objects.filter(Q(id=kwargs['pk'])).first()
-        fcmTokens = [request.user.fcmToken]
-        ids = [request.user.kakao_auth_id]
-        # for e in Meeting.objects.filter(Q(room=kwargs['pk'])).all():
-        # if e.user.fcmToken != None:
-        # fcmTokens.append(e.user.fcmToken)
+        fcmTokens = []
+        # ids = [request.user.kakao_auth_id]
+        for e in Meeting.objects.filter(Q(room=kwargs['pk'])).all():
+            if e.user.fcmToken != None:
+                fcmTokens.append(e.user.fcmToken)
         deleteChattingRoom(kwargs['pk'])
         if request.data['isNotification']:
-            send(fcmTokens, '안전 귀가 서비스', '안전 귀가 서비스가 시작됩니다.', 'SAFE_RETURN', ids)
-        self.perform_destroy(instance)
+            send(fcmTokens, ntitil='안전 귀가 서비스', nbody='안전 귀가 서비스가 시작됩니다.',
+                 dtitle='SAFE_RETURN', dbody=ids)
+        else:
+            send(fcmTokens, ntitle='미팅이 삭제되었습니다.',
+                 nbody='미팅이 ' + request.user.name + '님의 의해 삭제되었습니다.')
+            self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -230,13 +234,15 @@ class SelectedRequestMatchingView(viewsets.ReadOnlyModelViewSet, mixins.UpdateMo
                 "user_role": 'g'
             }
             Meeting.objects.create(**meetingInfo)
-            matchedUserFcmList.append(e.user.fcmToken)
+
             # allUserIds.append(e.user.kakao_auth_id)
         for e in Meeting.objects.filter(Q(room=room.id)).all():
             allUserIds.append(e.user.kakao_auth_id)
             allUserNames.append(e.user.name)
+            if e.user.fcmToken != None and e.user.kakao_auth_id != request.user.kakao_auth_id:
+                matchedUserFcmList.append(e.user.fcmToken)
         print(allUserIds, allUserNames)
-        # send(matchedUserFcmList, "요청한 미팅이 매칭되었습니다.", "요청한 미팅이 매칭되었습니다.")
+        send(matchedUserFcmList, ntitle="미팅이 매칭되었습니다.", nbody="미팅이 매칭되었습니다.")
         makeChattingRoom(room.id, allUserIds, allUserNames)
         return Response(RoomSerializer(room).data, status=status.HTTP_200_OK)
 
@@ -335,7 +341,7 @@ class InviteeParcitipateRequestViewSet(mixins.UpdateModelMixin, viewsets.ReadOnl
             instance._prefetched_objects_cache = {}
 
         allRequestList = FriendsParticipation.objects.filter(
-            Q(room=room.id) & Q(type='p')).all()
+            Q(party_number=instance.party_number)).all()
 
         if request.data["is_accepted"] == 'r':
             fcmList = []
@@ -344,9 +350,10 @@ class InviteeParcitipateRequestViewSet(mixins.UpdateModelMixin, viewsets.ReadOnl
                     "is_accepted": 'r'
                 }
                 e.update(**updatedData)
-                fcmList.append(e.user.fcmToken)
-            fcmList.remove(instance.user.fcmToken)
-            # send(fcmList, "참여 요청이 거절되었습니다.", instance.user.name + "님께서 참여 요청을 거절하였습니다.")
+                if e.user.fcmToken != None and e.user.kakao_auth_id != request.user.kakao_auth_id:
+                    fcmList.append(e.user.fcmToken)
+            send(fcmList, ntitle="참여 요청이 거절되었습니다.", nbody=(
+                request.user.name + "님께서 참여 요청을 거절하였습니다."))
 
             return Response(RoomSerializer(room.first()).data, status=status.HTTP_205_RESET_CONTENT)
 
@@ -354,11 +361,12 @@ class InviteeParcitipateRequestViewSet(mixins.UpdateModelMixin, viewsets.ReadOnl
         fcmList = []
         for e in allRequestList:
             isAllAccept &= (e.is_accepted == 'a')
-            fcmList.append(e.user.fcmToken)
+            if e.user.fcmToken != None:
+                fcmList.append(e.user.fcmToken)
 
         if isAllAccept:
-            fcmList.remove(instance.user.fcmToken)
-            # send(fcmList, "참여 요청이 모두 수락되었습니다.", "참여 요청이 모두 수락되었습니다.\n방 생성자가 수락하게 되면 최종적으로 미팅이 매칭됩니다.")
+            send(fcmList, ntitle="참여 요청이 모두 수락되었습니다.",
+                 nbody="참여 요청이 모두 수락되었습니다.\n방 생성자가 수락하게 되면 최종적으로 미팅이 매칭됩니다.")
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -412,20 +420,28 @@ class InviteeCreateRequestViewSet(mixins.UpdateModelMixin, viewsets.ReadOnlyMode
                 instance._prefetched_objects_cache = {}
 
             room = Room.objects.filter(Q(id=instance.room.id))
+            allRequest = FriendsParticipation.objects.filter(
+                Q(party_number=instance.party_number)).all()
+            fcmTokenList = []
             # room = Room.objects.get(Q(id=instance.room.id))
             if request.data["is_accepted"] == 'r':
                 updatedData = {
                     "status": 'c'
                 }
                 room.update(**updatedData)
+                for e in allRequest:
+                    if e.user.fcmToken != None and e.user.kakao_auth_id != request.user.kakao_auth_id:
+                        fcmTokenList.append(e.user.fcmToken)
+                send(fcmTokenList, ntitle="미팅 생성이 취소되었습니다.",
+                     nbody=(request.user.name + "님께서 미팅 생성을 거부하였습니다."))
                 # return Response(RoomSerializer(room.first()).data, status=status.HTTP_205_RESET_CONTENT)
                 return Response(RoomSerializer(room).data, status=status.HTTP_205_RESET_CONTENT)
 
-            allRequestList = FriendsParticipation.objects.filter(
-                Q(room=instance.room.id) & Q(type='c')).all()
             isAllAccept = True
-            for e in allRequestList:
+            for e in allRequest:
                 isAllAccept &= (e.is_accepted == 'a')
+                if e.user.fcmToken != None:
+                    fcmTokenList.append(e.user.fcmToken)
 
             if isAllAccept:
                 updatedData = {
@@ -433,7 +449,7 @@ class InviteeCreateRequestViewSet(mixins.UpdateModelMixin, viewsets.ReadOnlyMode
                 }
                 room.update(**updatedData)
                 room = room.first()
-                for e in allRequestList:
+                for e in allRequest:
                     # user = User.objects.filter(Q(kakao_auth_id=e.user.kakao_auth_id)).first()
                     user = User.objects.get(
                         Q(kakao_auth_id=e.user.kakao_auth_id))
@@ -444,6 +460,8 @@ class InviteeCreateRequestViewSet(mixins.UpdateModelMixin, viewsets.ReadOnlyMode
                         "user_role": 'g' if e.user_role == 'invitee' else 'a'
                     }
                     Meeting.objects.create(**meetingInfo)
+                send(fcmTokenList, ntitle="미팅 생성이 완료되었습니다.",
+                     nbody="미팅 생성이 완료되었습니다.")
 
             return Response(serializer.data, status=status.HTTP_200_OK)
         except KeyError:
@@ -499,23 +517,32 @@ class InviterParticipateRequestViewSet(mixins.CreateModelMixin, mixins.DestroyMo
             "type": 'p',
             "party_number": str(participatedRoom.id) + inviter.kakao_auth_id
         })
-
+        fcmTokenList = []
         for instance in instanceList:
             request.data.update({
                 'user': instance,
                 'is_accepted': 'w' if instance.kakao_auth_id != str(request.user) else 'a',
                 'user_role': 'invitee' if instance.kakao_auth_id != str(request.user) else 'inviter'
             })
+            if instance.fcmToken != None and instance.kakao_auth_id != request.user.kakao_auth_id:
+                fcmTokenList.append(instance.fcmToken)
             instance = FriendsParticipation.objects.create(**request.data)
 
+        send(fcmTokenList, ntitle="미팅에 초대되었습니다.",
+             nbody=(request.user.name + "님께서 미팅에 초대하셨습니다."))
         return Response(ParticipationRoomUserSerializer(instance).data, status=status.HTTP_201_CREATED)
 
     def destroy(self, request, *args, **kwargs):
         party_number = kwargs['pk']
         instances = FriendsParticipation.objects.filter(
             Q(party_number=party_number))
+        fcmTokenList = []
         for instance in instances:
+            if instance.user.fcmToken != None and instance.user.kakao_auth_id != request.user.kakao_auth_id:
+                fcmTokenList.append(instance.user.fcmToken)
             self.perform_destroy(instance)
+        send(fcmTokenList, ntitle='미팅 참여 요청이 삭제되었습니다.',
+             nbody=(request.user.name + '님께서 미팅 참여 요청을 삭제하였습니다.'))
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
