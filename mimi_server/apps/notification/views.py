@@ -22,30 +22,48 @@ def sendNotification(request):
         for user in request.data['users']:
             fcmList.append(User.objects.get(Q(kakao_auth_id=user)).fcmToken)
 
-        res = send(fcmList, request.data['title'], request.data['body'])
+        res = send(
+            fcmList, ntitle=request.data['title'], nbody=request.data['body'])
         return Response(res.json(), status=status.HTTP_200_OK)
 
 
-def send(fcmList, ntitle, nbody, dtitle=None, dbody=None):
+def send(fcmList, ntitle=None, nbody=None, dtitle=None, dbody=None):
+    print(fcmList, ntitle, nbody, dtitle, dbody)
     headers = {
         'Content-Type': 'application/json; charset=utf-8',
         'Authorization': FIREBASE_SERVER_KEY
     }
     data = {
         "registration_ids": fcmList,
-        "notification": {
+    }
+    if dbody == None:
+        data['notification'] = {
             "title": ntitle,
             "body": nbody,
             "content_available": True,
             "priority": "high"
-        },
-        "data": {
+        }
+    elif ntitle == None:
+        data['data'] = {
+            "title": dtitle,
+            "body": dbody,
+            "content_available": True,
+            "priority": "high"
+        }
+    else:
+        data['notification'] = {
+            "title": ntitle,
+            "body": nbody,
+            "content_available": True,
+            "priority": "high"
+        }
+        data[data] = {
             "title": dtitle if dtitle != None else ntitle,
             "body": dbody if dbody != None else nbody,
             "content_available": True,
             "priority": "high"
         }
-    }
+
     res = requests.post('https://fcm.googleapis.com/fcm/send',
                         headers=headers, data=json.dumps(data))
     return res
