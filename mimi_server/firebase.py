@@ -1,5 +1,4 @@
-import time
-from datetime import timedelta
+from datetime import datetime
 from uuid import uuid4
 
 from firebase_admin import firestore, initialize_app, credentials, auth
@@ -9,19 +8,20 @@ __all__ = ['makeChattingRoom', 'deleteChattingRoom', 'registerUser']
 initialize_app(credentials.Certificate(GOOGLE_APPLICATION_CREDENTIALS))
 
 
-def makeChattingRoom(roomId, users, names):
+def makeChattingRoom(roomId, users, names, avatars):
     db = firestore.client()
     db.collection(u'CHATINGS').add({
         u'roomId': roomId,
         u'latestMessage': {
             u'text': u'Matching was successful.',
-            u'createdAt': int(time.time() * 1000),
+            u'createdAt': datetime.now(),
         },
         u'users': users,
-        u'name': ','.join(names)
+        u'name': ','.join(names),
+        u'avatars': avatars
     })[1].collection(u'MESSAGES').add({
         u'text': u'Matching was successful.',
-        u'createdAt': int(time.time() * 1000),
+        u'createdAt': datetime.now(),
         u'system': True,
     })
 
