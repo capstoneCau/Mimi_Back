@@ -33,7 +33,7 @@ class AnimalViewSet(viewsets.ViewSet):
                 path = os.path.join(os.path.join(
                     ANIMAL_IMAGE_PATH, imageLabel), filename)
                 image = Image.open(path)
-                image = image.resize((80, 80), Image.ANTIALIAS)
+                image = image.resize((160, 160), Image.ANTIALIAS)
                 buffered = BytesIO()
                 image.save(buffered, format='JPEG')
                 result.append({

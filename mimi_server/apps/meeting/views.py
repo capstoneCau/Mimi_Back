@@ -11,9 +11,12 @@ from django.utils.datastructures import MultiValueDictKeyError
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly
 from rest_framework.exceptions import ValidationError
 from django.db.models import Count
-
+import os
+import base64
+from PIL import Image
+from io import BytesIO
 from mimi_server.firebase import makeChattingRoom, deleteChattingRoom
-
+from mimi_server.settings import ANIMAL_IMAGE_PATH
 from .serializer import RoomSerializer, MeetingRoomSerializer, MeetingUserSerializer, ParticipationRoomUserSerializer, \
     ParticipatiedUserSerializer, ParticipatiedRoomSerializer, FriendsParticipationSerializer, SelectedParticipationSerializer
 
@@ -179,6 +182,7 @@ class SelectedRequestMatchingView(viewsets.ReadOnlyModelViewSet, mixins.UpdateMo
             Q(party_number=kwargs['pk']))
         allUserIds = []
         allUserNames = []
+        allImages = []
         if len(selectedRequest) == 0:
             return Response({"detail": "요청한 Party number는 존재하지 않습니다.", "error": 404}, status=status.HTTP_404_NOT_FOUND)
 
@@ -239,11 +243,22 @@ class SelectedRequestMatchingView(viewsets.ReadOnlyModelViewSet, mixins.UpdateMo
         for e in Meeting.objects.filter(Q(room=room.id)).all():
             allUserIds.append(e.user.kakao_auth_id)
             allUserNames.append(e.user.name)
+            profile = e.user.profileImg
+            filename = str(profile.imgData).split("/")[2]
+            imageLabel = profile.label
+            path = os.path.join(os.path.join(
+                ANIMAL_IMAGE_PATH, imageLabel), filename)
+            image = Image.open(path)
+            image = image.resize((160, 160), Image.ANTIALIAS)
+            buffered = BytesIO()
+            image.save(buffered, format='JPEG')
+            allImages.append('data:image/jpeg;base64,' +
+                             str(base64.b64encode(buffered.getvalue()))[2:])
             if e.user.fcmToken != None and e.user.kakao_auth_id != request.user.kakao_auth_id:
                 matchedUserFcmList.append(e.user.fcmToken)
-        print(allUserIds, allUserNames)
+        print(allUserIds, allUserNames, allImages[0][0:10])
         send(matchedUserFcmList, ntitle="미팅이 매칭되었습니다.", nbody="미팅이 매칭되었습니다.")
-        makeChattingRoom(room.id, allUserIds, allUserNames)
+        makeChattingRoom(room.id, allUserIds, allUserNames, allImages)
         return Response(RoomSerializer(room).data, status=status.HTTP_200_OK)
 
 
