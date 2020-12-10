@@ -71,10 +71,40 @@ class SearchUserView(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         try:
             email = self.request.GET['email']
-            queryset = User.objects.filter(Q(email=email))
+            queryset = User.objects.filter(
+                Q(email=email) & Q(gender=self.request.user.gender))
             return queryset
         except KeyError:
             raise ValidationError("email 데이터를 넣어주세요.")
+
+
+class UpdateUserView(mixins.UpdateModelMixin, viewsets.ReadOnlyModelViewSet):
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        raise ValidationError(detail="Not Supported")
+
+    def update(self, request, *args, **kwargs):
+        kakaoId = kwargs['pk']
+        if len(request.data) > 3:
+            return Response({"detail": "Too many variables.", "error": 400}, status=status.HTTP_400_BAD_REQUEST)
+        if not ('name' in request.data and 'mbti' in request.data and 'profileImg' in request.data):
+            return Response({"detail": "Values ​​other than name, mbti, and profileImg were entered as data.", "error": 405}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        if request.user.kakao_auth_id != str(kakaoId):
+            return Response({"detail": "You can only change your own data.", "error": 401}, status=status.HTTP_401_UNAUTHORIZED)
+        try:
+            user = User.objects.get(Q(kakao_auth_id=str(kakaoId)))
+        except User.DoesNotExist:
+            return Response({"detail": "This user does not exist.", "error": 404}, status=status.HTTP_404_NOT_FOUND)
+
+        partial = kwargs.pop('partial', False)
+        serializer = self.get_serializer(
+            user, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class FcmTokenView(viewsets.ReadOnlyModelViewSet, mixins.UpdateModelMixin):
