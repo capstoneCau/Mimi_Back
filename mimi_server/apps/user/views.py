@@ -87,10 +87,10 @@ class UpdateUserView(mixins.UpdateModelMixin, viewsets.ReadOnlyModelViewSet):
 
     def update(self, request, *args, **kwargs):
         kakaoId = kwargs['pk']
-        if len(request.data) > 3:
+        if len(request.data) > 2:
             return Response({"detail": "Too many variables.", "error": 400}, status=status.HTTP_400_BAD_REQUEST)
-        if not ('name' in request.data and 'mbti' in request.data and 'profileImg' in request.data):
-            return Response({"detail": "Values ​​other than name, mbti, and profileImg were entered as data.", "error": 405}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        if not ('mbti' in request.data and 'profileImg' in request.data):
+            return Response({"detail": "Values ​​other than mbti, and profileImg were entered as data.", "error": 405}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
         if request.user.kakao_auth_id != str(kakaoId):
             return Response({"detail": "You can only change your own data.", "error": 401}, status=status.HTTP_401_UNAUTHORIZED)
         try:
